@@ -1,0 +1,85 @@
+defaults:
+  - model: default.yaml
+  - datamodule: default.yaml
+  - callbacks: default.yaml
+  - logger: wandb.yaml # set logger here or use command line (e.g. `python train.py logger=tensorboard`)
+  - trainer: default.yaml
+  - _self_
+
+  # enable color logging
+  - override hydra/job_logging: colorlog
+  - override hydra/hydra_logging: colorlog
+
+# path to original working directory
+# hydra hijacks working directory by changing it to the new log directory
+# https://hydra.cc/docs/next/tutorials/basic/running_your_app/working_directory
+original_work_dir: ${hydra:runtime.cwd}
+
+# path to folder with data & define model name
+model_name: hydra_test
+save_dir: ${original_work_dir}/${model_name}
+
+# change the default directory of hydra output
+hydra:
+    output_subdir: ${save_dir}
+
+model:
+    backbone: vgg16
+
+trainer:
+    max_epochs: 5
+    resume_from_checkpoint: null
+
+logger:
+    wandb:
+        save_dir: ${save_dir}/lightning_logs
+        project: slice-and-view_avgpool
+
+
+datamodule:
+    # Configuration
+    datapath: ${original_work_dir}/data
+    nshot: 3
+    nsamples: 500
+    img_sizes: 
+        cauliflower: [2048,1536]
+        apollo70017: [1004,1024]
+
+    # hyperparams
+    val_data_ratio: 0.15
+    batch_size: 5
+    n_cpu: 4
+
+    # Data augmentation
+    contrast: [0.5,1.5]
+    rotation_degrees: 90.0
+    scale: [0.25,1.0]
+    crop_size: 256
+
+
+callbacks:
+    model_checkpoint:
+        save_top_k: 20
+        monitor: "val/val_loss" # name of the logged metric which determines when model is improving
+        dirpath: ${save_dir}/checkpoints/${model_name}
+        filename: "{epoch:02d}_{val/val_loss:.3f}"
+
+# pretty print config at the start of the run using Rich library
+print_config: True
+
+# disable python warnings if they annoy you
+ignore_warnings: True
+
+# set False to skip model training
+train: True
+
+# evaluate on test set, using best model weights achieved during training
+# lightning chooses best weights based on the metric specified in checkpoint callback
+test: False
+
+# seed for random number generators in pytorch, numpy and python.random
+seed: 0
+
+# default name for the experiment, determines logging folder path
+# (you can overwrite this name in experiment configs)
+name: "default"

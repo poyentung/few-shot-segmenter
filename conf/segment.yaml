@@ -1,0 +1,51 @@
+defaults:
+  - model: default.yaml
+  - annotator: default.yaml
+  - _self_
+
+  # enable color logging
+  - override hydra/job_logging: colorlog
+  - override hydra/hydra_logging: colorlog
+
+# path to original working directory
+# hydra hijacks working directory by changing it to the new log directory
+# https://hydra.cc/docs/next/tutorials/basic/running_your_app/working_directory
+original_work_dir: ${hydra:runtime.cwd}
+
+# path to directory where images are saved 
+save_dir: ${original_work_dir}/test_data/cauliflower2_magnetite_mask
+
+# checkpoint path of the lightning module
+ckpt_path: ${original_work_dir}/checkpoints/20230411_256_copy_paste/Avgpool-epoch=194.ckpt
+query_img_path: ${original_work_dir}/test_data/cauliflower2
+support_imgs_dir: ${original_work_dir}/test_data/cauliflower_magnetite_sup/image
+support_annots_dir: ${original_work_dir}/test_data/cauliflower_magnetite_sup/annotation
+
+
+# change the default directory of hydra output
+hydra:
+    output_subdir: ${save_dir}
+
+model:
+    backbone: vgg16
+    
+annotator:
+    resize: [768,1024]
+    patch_width: 256
+    patch_height: 256
+    margin: 28
+
+
+# pretty print config at the start of the run using Rich library
+print_config: True
+
+# disable python warnings if they annoy you
+ignore_warnings: True
+
+# evaluate on test set, using best model weights achieved during training
+# lightning chooses best weights based on the metric specified in checkpoint callback
+test: False
+
+# default name for the experiment, determines logging folder path
+# (you can overwrite this name in experiment configs)
+name: "default"

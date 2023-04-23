@@ -1,0 +1,19 @@
+_target_: sav.datamodule.DatamoduleSAV
+    
+# Configuration
+datapath: data
+nshot: 3
+nsamples: 500
+img_sizes: null
+
+# hyperparams
+val_data_ratio: 0.15
+batch_size: 5
+n_cpu: 4
+
+# Data augmentation
+contrast: [0.5,1.5]
+rotation_degrees: 90.0
+scale: [0.25,1.0]
+crop_size: 256
+

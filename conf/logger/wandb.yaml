@@ -1,0 +1,6 @@
+# https://www.tensorflow.org/tensorboard/
+
+wandb:
+  _target_: pytorch_lightning.loggers.WandbLogger
+  save_dir: null
+  project: null
