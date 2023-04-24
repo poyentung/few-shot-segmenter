@@ -29,7 +29,7 @@ def segment(config: DictConfig):
     annotator(query_img_path = config.query_img_path,
               support_imgs_dir = config.support_imgs_dir,
               support_annots_dir = config.support_annots_dir,
-              save_dir = config.save_dir)
+              save_dir = config.output_dir)
     
     # Send some parameters from config to all lightning loggers
     log.info("Logging hyperparameters!")

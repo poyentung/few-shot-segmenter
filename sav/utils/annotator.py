@@ -23,9 +23,10 @@ class Annotator:
                  patch_width:int=256, 
                  patch_height:int=256,
                  margin:int=28,
+                 batch_size:int=3,
                 ):
-        self.model = model
-        self.device = model.device
+        self.device = "cuda" if torch.cuda.is_available() else model.device
+        self.model = model.to(device=self.device)
         # self.dataset = dataset
         # self.phase = phase
         self.init_img_height, self.init_img_width = resize
@@ -41,15 +42,20 @@ class Annotator:
         self.nrow = self.init_img_height // self.patch_height 
         self.ncol = self.init_img_width // self.patch_width
         self.margin = margin
+        self.batch_size = batch_size
     
     def __call__(self, 
                  query_img_path:Union[Path, List[Path]],
                  support_imgs_dir:Union[Path, AnyStr],
                  support_annots_dir:Union[Path, AnyStr],
+                 batch_size:int=None,
                  save_dir:Union[Path, AnyStr]=None):
         
-        if isinstance(query_img_path, list):
-            return self.detect(query_img_path, support_imgs_dir, support_annots_dir)
+        batch_size = self.batch_size if batch_size is None else batch_size
+        
+        if query_img_path.endswith('.tiff'):
+            return self.detect(query_img_path, support_imgs_dir, support_annots_dir, batch_size)
+        
         else:
             if save_dir is None: 
                 raise TypeError('save_dir cannot be None.')
@@ -59,19 +65,20 @@ class Annotator:
             query_img_paths = sorted([os.path.join(query_img_path, _img_path) for _img_path in os.listdir(query_img_path) if '.tiff' in _img_path])
             
             for _img_path in track(query_img_paths, description="Segementing"):
-                
                 out = self.detect(_img_path, 
                                   support_imgs_dir, 
-                                  support_annots_dir)
+                                  support_annots_dir,
+                                  batch_size)
                 recon_img = Image.fromarray(np.where(out['annot']>0.5,255,0).astype(np.int8)).convert('L')
                 
-                img_name = _img_path.split('/')[-1].split('.')[0]
+                img_name = os.path.basename(_img_path).split('.')[0]
                 recon_img.save(os.path.join(save_dir, img_name+'_mask.tiff'))
     
     def detect(self, 
                query_img_path:Union[Path, AnyStr],
                support_imgs_dir:Union[Path, AnyStr],
-               support_annots_dir:Union[Path, AnyStr]):
+               support_annots_dir:Union[Path, AnyStr],
+               batch_size:int):
         
         query_imgs_init = Image.open(query_img_path).resize((self.init_img_width, self.init_img_height))
         query_imgs = self.create_patches(query_imgs_init, self.patch_height, self.patch_width, self.margin)
@@ -82,18 +89,22 @@ class Annotator:
         
         support_imgs = self.get_imgs(support_imgs_dir) # return a list of PIL.Image images
         support_imgs = torch.stack([self.transform(img) for img in support_imgs])
-        support_imgs = torch.tile(support_imgs, (query_imgs.size(0),1,1,1,1))
+        support_imgs = torch.tile(support_imgs, (batch_size,1,1,1,1))
         
         support_annots = self.get_imgs(support_annots_dir)
         support_annots = [np.where(np.array(annot)>0,1,0) for annot in support_annots]
         support_annots = torch.stack([torch.where(self.transform_annot(img)>0.5,1.0,0.0) for img in support_annots])
-        support_annots = torch.tile(support_annots, (query_imgs.size(0),1,1,1,1))
-
-        query_annot_hat = self.model(query_img=query_imgs.to(self.device), 
-                                     support_imgs=support_imgs.to(self.device), 
-                                     support_annots=support_annots.to(self.device))
-
-        # query_annot_hat_binary = query_annot_hat.squeeze().detach().cpu().numpy()
+        support_annots = torch.tile(support_annots, (batch_size,1,1,1,1))
+        
+        query_annot_hat=[]
+        query_imgs = DataLoader(query_imgs, batch_size=batch_size)
+        for batch in query_imgs:
+            batch_annot_hat = self.model(query_img=batch.to(self.device), 
+                                         support_imgs=support_imgs.to(self.device), 
+                                         support_annots=support_annots.to(self.device))
+            query_annot_hat.append(batch_annot_hat.detach().cpu())
+            
+        query_annot_hat = torch.cat(query_annot_hat, dim=0)
         query_annot_hat_binary = torch.where(query_annot_hat>0.5,1.0,0.0).squeeze().detach().cpu().numpy()
         recon_img = self.recover_patches(query_annot_hat_binary,
                                          patch_width=self.patch_width, 
