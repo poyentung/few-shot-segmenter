@@ -10,7 +10,7 @@ from rich.progress import track
 from typing import Union, List, Dict, Tuple, AnyStr
 from sav.module.fs_segmenter import FewShotSegmenter
 from sav.datamodule import DatasetSAV
-
+from sav.utils.utils import downsample_and_pad
 import matplotlib.pyplot as plt
 
 class Annotator:
@@ -19,28 +19,25 @@ class Annotator:
                  # dataset: DatasetSAV,
                  # phase: str,
                  transform: "torchvision.transforms"=None,
-                 resize:Tuple[int,int]=(768,1024),
+                 down_sampling:int=2,
                  patch_width:int=256, 
                  patch_height:int=256,
                  margin:int=28,
                  batch_size:int=3,
                 ):
+        
         self.device = "cuda" if torch.cuda.is_available() else model.device
         self.model = model.to(device=self.device)
-        # self.dataset = dataset
-        # self.phase = phase
-        self.init_img_height, self.init_img_width = resize
+        
+        # self.init_img_height, self.init_img_width = resize
         self.transform = transform if transform is not None else transforms.Compose([transforms.ToTensor(),
-                                                                                     # transforms.Resize((patch_height, patch_width)),
                                                                                      transforms.Resize((patch_height+(margin*2), patch_width+(margin*2))),
                                                                                      transforms.Normalize(mean=[0.5],std=[0.5])])
         self.transform_annot = transforms.Compose([transforms.ToTensor(),
                                                    transforms.Resize((patch_height, patch_width))])
-                                                   # transforms.Resize((patch_height+(margin*2), patch_width+(margin*2)))])
         self.patch_width = patch_width
         self.patch_height = patch_height
-        self.nrow = self.init_img_height // self.patch_height 
-        self.ncol = self.init_img_width // self.patch_width
+        self.down_sampling = down_sampling
         self.margin = margin
         self.batch_size = batch_size
     
@@ -53,9 +50,11 @@ class Annotator:
         
         batch_size = self.batch_size if batch_size is None else batch_size
         
+        # the query_img_path is a single image
         if query_img_path.endswith('.tiff'):
             return self.detect(query_img_path, support_imgs_dir, support_annots_dir, batch_size)
         
+        # the query_img_path is folder containing multiple images to be segmented
         else:
             if save_dir is None: 
                 raise TypeError('save_dir cannot be None.')
@@ -70,9 +69,17 @@ class Annotator:
                                   support_annots_dir,
                                   batch_size)
                 recon_img = Image.fromarray(np.where(out['annot']>0.5,255,0).astype(np.int8)).convert('L')
+                resized_img = Image.fromarray(out['raw'])
+                
+                mask_dir = os.path.join(save_dir,'mask')
+                rescale_img_dir = os.path.join(save_dir,'resized_img')
+                
+                if not os.path.exists(mask_dir):os.makedirs(mask_dir)
+                if not os.path.exists(rescale_img_dir):os.makedirs(rescale_img_dir)
                 
                 img_name = os.path.basename(_img_path).split('.')[0]
-                recon_img.save(os.path.join(save_dir, img_name+'_mask.tiff'))
+                recon_img.save(os.path.join(mask_dir, img_name+'_mask.tiff'))
+                resized_img.save(os.path.join(rescale_img_dir, img_name+'.tiff'))
     
     def detect(self, 
                query_img_path:Union[Path, AnyStr],
@@ -80,12 +87,13 @@ class Annotator:
                support_annots_dir:Union[Path, AnyStr],
                batch_size:int):
         
-        query_imgs_init = Image.open(query_img_path).resize((self.init_img_width, self.init_img_height))
-        query_imgs = self.create_patches(query_imgs_init, self.patch_height, self.patch_width, self.margin)
+        # process padding and resizing the image
+        query_imgs_init = Image.open(query_img_path)
+        query_imgs_init = downsample_and_pad(query_imgs_init, (self.patch_width, self.patch_height), self.down_sampling)
+        ncol, nrow = query_imgs_init.size[0]//self.patch_width, query_imgs_init.size[1]//self.patch_height
+        
+        query_imgs = self.create_patches(query_imgs_init, self.patch_width, self.patch_height, self.margin)
         query_imgs = torch.stack([self.transform(img) for img in query_imgs])
-        # support_data = self.dataset.__getitem__(np.random.choice(len(dataset), 1), self.phase)
-        # support_imgs =  torch.tile(support_data['support_imgs'], (len(query_imgs),1,1,1,1))
-        # support_annots = torch.tile(support_data['support_annots'], (len(query_imgs),1,1,1,1))
         
         support_imgs = self.get_imgs(support_imgs_dir) # return a list of PIL.Image images
         support_imgs = torch.stack([self.transform(img) for img in support_imgs])
@@ -110,8 +118,8 @@ class Annotator:
                                          patch_width=self.patch_width, 
                                          patch_height=self.patch_height,
                                          margin=self.margin,
-                                         n_row=self.nrow,
-                                         n_col=self.ncol)
+                                         n_row=nrow,
+                                         n_col=ncol)
         return {'raw': np.array(query_imgs_init),
                 'annot':recon_img}
     
@@ -136,7 +144,8 @@ class Annotator:
         width, height = img.size
 
         img = ImageOps.expand(image=img, border=margin)
-        
+        # imgs = patchify(np.array(img), (patch_height+(margin*2),patch_width+(margin*2)),step=patch_height)
+        # imgs = [img for img in imgs.reshape(-1,imgs.shape[2],imgs.shape[3])]
         imgs = []
         # Loop through the image and create patches
         for i in range(0, width, patch_width):
@@ -163,6 +172,9 @@ class Annotator:
                        )->"numpy.ndarray":
         
         annot_imgs = annot_imgs[..., margin:patch_height+margin, margin:patch_width+margin]
+        # annot_imgs = annot_imgs.reshape(n_row, n_col, patch_height, patch_width)
+        # annot_imgs = unpatchify(annot_imgs, (int(n_row*patch_height), int(n_col*patch_height)))
+        
         full_width= n_col*patch_width
         full_height= n_row*patch_height
 

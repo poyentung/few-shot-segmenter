@@ -18,8 +18,7 @@ def segment(config: DictConfig):
 
     # Init lightning model
     log.info(f"Instantiating model <{config.model._target_}>")
-    model: FewShotSegmenter = hydra.utils.instantiate(config.model)
-    model.load_from_checkpoint(config.ckpt_path)
+    model: FewShotSegmenter = hydra.utils.instantiate(config.model).load_from_checkpoint(config.ckpt_path)
     
     # Init annotator
     log.info(f"Instantiating annotator <{config.annotator._target_}>")
@@ -31,14 +30,6 @@ def segment(config: DictConfig):
               support_annots_dir = config.support_annots_dir,
               save_dir = config.output_dir)
     
-    # Send some parameters from config to all lightning loggers
-    log.info("Logging hyperparameters!")
-    hydra_logging.log_hyperparameters(
-        config=config,
-        model=model,
-        annotator=annotator
-    )
-        
     # Make sure everything closed properly
     log.info("Finalizing!")
 

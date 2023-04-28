@@ -16,7 +16,7 @@ defaults:
 original_work_dir: ${hydra:runtime.cwd}
 
 # path to folder with data & define model name
-model_name: hydra_test
+model_name: _cauliflower_6_slices
 save_dir: ${original_work_dir}/${model_name}
 
 # change the default directory of hydra output
@@ -41,9 +41,6 @@ datamodule:
     datapath: ${original_work_dir}/data
     nshot: 3
     nsamples: 500
-    img_sizes: 
-        cauliflower: [2048,1536]
-        apollo70017: [1004,1024]
 
     # hyperparams
     val_data_ratio: 0.15

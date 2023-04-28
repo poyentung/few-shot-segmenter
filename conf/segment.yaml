@@ -19,7 +19,7 @@ save_dir: ${original_work_dir}/test_data/cauliflower2_magnetite_mask
 ckpt_path: ${original_work_dir}/checkpoints/20230411_256_copy_paste/Avgpool-epoch=194.ckpt
 
 # path for segmentation
-query_img_path: ${original_work_dir}/test_data/cauliflower2
+query_img_path: ${original_work_dir}/test_data/cauliflower2_aligned
 support_imgs_dir: ${original_work_dir}/test_data/cauliflower_magnetite_sup/image
 support_annots_dir: ${original_work_dir}/test_data/cauliflower_magnetite_sup/annotation
 output_dir: ${save_dir}/outputs
@@ -32,7 +32,7 @@ model:
     backbone: vgg16
     
 annotator:
-    resize: [768,1024]
+    down_sampling: 2
     patch_width: 256
     patch_height: 256
     margin: 24

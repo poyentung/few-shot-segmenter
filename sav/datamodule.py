@@ -9,6 +9,7 @@ from pathlib import Path
 from typing import Union, Dict, Tuple, AnyStr
 import torchvision
 import torchvision.transforms.v2 as transforms
+from sav.utils.utils import get_img_sizes, sampling_from_dir, sample_paired_img_annot
 
 torchvision.disable_beta_transforms_warning()
 
@@ -17,8 +18,8 @@ class DatamoduleSAV(pl.LightningDataModule):
                  datapath:Union[Path, AnyStr], 
                  nshot:int=5,
                  nsamples:int=1000,
-                 img_sizes:Dict[str, Tuple[int, int]]={'cauliflower':(2048,1536),
-                                                       'apollo_70017':(1004,1024)},
+                 # img_sizes:Dict[str, Tuple[int, int]]={'cauliflower':(2048,1536),}
+                 #                                       # 'apollo_70017':(1004,1024)},
                  contrast:Tuple[float,float]=(0.5,1.2),
                  vflip_p:float=0.5, 
                  hflip_p:float=0.5,
@@ -30,11 +31,14 @@ class DatamoduleSAV(pl.LightningDataModule):
                  n_cpu:int=4,
                 ):
         super().__init__()
+        
+        
         self.nshot = nshot
         self.val_data_ratio = val_data_ratio
         self.batch_size = batch_size
         self.n_cpu = n_cpu
-        self.dataset_full = DatasetSAV(datapath, nshot, nsamples, img_sizes, contrast, 
+        self.img_sizes = get_img_sizes(datapath)# e.g., {'cauliflower':(2048,1536),'apollo_70017':(1004,1024)}
+        self.dataset_full = DatasetSAV(datapath, nshot, nsamples, self.img_sizes, contrast, 
                                        vflip_p, hflip_p, rotation_degrees, scale, crop_size)
     
     def setup(self, stage = None):
@@ -76,8 +80,7 @@ class DatasetSAV(Dataset):
                  datapath:Union[Path, AnyStr], 
                  nshot:int=5,
                  nsamples:int=1000,
-                 img_sizes:Dict[str, Tuple[int, int]]={'cauliflower':(2048,1536),
-                                                       'apollo_70017':(1004,1024)},
+                 img_sizes:Dict[str, Tuple[int, int]]=None,
                  contrast:Tuple[float,float]=(0.5,1.2),
                  vflip_p:float=0.5, 
                  hflip_p:float=0.5,
@@ -133,8 +136,8 @@ class DatasetSAV(Dataset):
 
         # Randomly sample a phase from all specimens
         if phase_dir is None:
-            specimen_dir = DatasetSAV.sampling_from_dir(self.base_path)
-            phase_dir = DatasetSAV.sampling_from_dir(specimen_dir)
+            specimen_dir = sampling_from_dir(self.base_path)
+            phase_dir = sampling_from_dir(specimen_dir)
             specimen_phase_name = specimen_dir.split('/')[-1] + '_' + phase_dir.split('/')[-1]
         else:
             specimen_phase_name = phase_dir.split('/')[-2] + '_' + phase_dir.split('/')[-1]
@@ -142,7 +145,7 @@ class DatasetSAV(Dataset):
         specimen_name = specimen_phase_name.split('_')[0]
         
         # Get the querry img and annot
-        query_img, query_annot = DatasetSAV.sample_paired_img_annot(phase_dir)
+        query_img, query_annot = sample_paired_img_annot(phase_dir)
         # Get the rotated and cropped img and annot
         query_transformed = self.random_rotation_crop[specimen_name](query_img, query_annot)
         query_img, query_annot = query_transformed['img'], query_transformed['annot']
@@ -155,7 +158,7 @@ class DatasetSAV(Dataset):
         support_imgs = []
         support_annots = []
         for i in range(self.nshot):
-            support_img, support_annot = DatasetSAV.sample_paired_img_annot(phase_dir)
+            support_img, support_annot = sample_paired_img_annot(phase_dir)
             support_transformed = self.random_rotation_crop[specimen_name](support_img, support_annot)
             support_img, support_annot = support_transformed['img'], support_transformed['annot']
             support_img = self.normalize(support_img)
@@ -171,27 +174,27 @@ class DatasetSAV(Dataset):
                 'specimen_phase_name':specimen_phase_name,
                }
     
-    @classmethod
-    def sampling_from_dir(cls, path:Union[Path, AnyStr])->Union[Path, AnyStr]:
-        """
-        Ramdonly sample a file_name from a diretory, and return its full path of the file or the directory.
-        """
-        file_names = [file_name for file_name in os.listdir(path) if '.ipynb' not in file_name]
-        fine_name = np.random.choice(file_names, 1, replace=False)[0]
-        return os.path.join(path, fine_name)
+#     @classmethod
+#     def sampling_from_dir(cls, path:Union[Path, AnyStr])->Union[Path, AnyStr]:
+#         """
+#         Ramdonly sample a file_name from a diretory, and return its full path of the file or the directory.
+#         """
+#         file_names = [file_name for file_name in os.listdir(path) if '.ipynb' not in file_name]
+#         fine_name = np.random.choice(file_names, 1, replace=False)[0]
+#         return os.path.join(path, fine_name)
     
-    @classmethod
-    def sample_paired_img_annot(cls, phase_dir:Union[Path, AnyStr])->Tuple["numpy.ndarray", "numpy.ndarray"]:
-        # Randomly sample an img from the phase
-        img_dir = os.path.join(phase_dir, 'image')
-        img_path = DatasetSAV.sampling_from_dir(img_dir)
-        img = np.array(Image.open(img_path)).astype(np.float64)
+#     @classmethod
+#     def sample_paired_img_annot(cls, phase_dir:Union[Path, AnyStr])->Tuple["numpy.ndarray", "numpy.ndarray"]:
+#         # Randomly sample an img from the phase
+#         img_dir = os.path.join(phase_dir, 'image')
+#         img_path = DatasetSAV.sampling_from_dir(img_dir)
+#         img = np.array(Image.open(img_path)).astype(np.float64)
         
-        # Get the corresponding annotation of the img
-        annot_dir = os.path.join(phase_dir, 'annotation')
-        annot_path = os.path.join(phase_dir, 'annotation', img_path.split('/')[-1])
-        annot = np.array(Image.open(annot_path)).astype(np.float64)
-        return (img, annot)
+#         # Get the corresponding annotation of the img
+#         annot_dir = os.path.join(phase_dir, 'annotation')
+#         annot_path = os.path.join(phase_dir, 'annotation', img_path.split('/')[-1])
+#         annot = np.array(Image.open(annot_path)).astype(np.float64)
+#         return (img, annot)
 
 class RandomRotationCrop:
     """
@@ -248,7 +251,7 @@ class ImageCopyPaste:
         else:
             back_phase_dir = os.path.join(self.base_path, *specimen_phase_name.split('_'))
             
-            back_img, back_annot = DatasetSAV.sample_paired_img_annot(back_phase_dir)
+            back_img, back_annot = sample_paired_img_annot(back_phase_dir)
             back_img_transformed = self.transform(back_img, back_annot, background_mode=True)
             back_img, back_annot = back_img_transformed['img'], back_img_transformed['annot']
             back_img = self.normalize(back_img) # size = [1,512,512]
