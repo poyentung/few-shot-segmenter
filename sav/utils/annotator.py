@@ -107,6 +107,8 @@ class Annotator:
         query_annot_hat=[]
         query_imgs = DataLoader(query_imgs, batch_size=batch_size)
         for batch in query_imgs:
+            if batch.size(0)!=batch_size:
+                support_imgs, support_annots = support_imgs[:batch.size(0)], support_annots[:batch.size(0)]
             batch_annot_hat = self.model(query_img=batch.to(self.device), 
                                          support_imgs=support_imgs.to(self.device), 
                                          support_annots=support_annots.to(self.device))

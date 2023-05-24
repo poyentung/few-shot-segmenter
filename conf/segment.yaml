@@ -13,15 +13,19 @@ defaults:
 original_work_dir: ${hydra:runtime.cwd}
 
 # path to directory where images are saved 
-save_dir: ${original_work_dir}/test_data/cauliflower2_magnetite_mask
+save_dir: /itf-fi-ml/shared/users/poyenyt/slice-and-view/cauliflower3_output
+
+#${original_work_dir}/test_data/cauliflower2_magnetite_mask
 
 # checkpoint path of the lightning module
-ckpt_path: ${original_work_dir}/checkpoints/20230411_256_copy_paste/Avgpool-epoch=194.ckpt
+ckpt_path: ${original_work_dir}/_cauliflower3_filled_p=0.2/checkpoints/_cauliflower3_filled_p=0.2/last.ckpt
+
+#/checkpoints/20230411_256_copy_paste/Avgpool-epoch=194.ckpt
 
 # path for segmentation
-query_img_path: ${original_work_dir}/test_data/cauliflower2_aligned
-support_imgs_dir: ${original_work_dir}/test_data/cauliflower_magnetite_sup/image
-support_annots_dir: ${original_work_dir}/test_data/cauliflower_magnetite_sup/annotation
+query_img_path: /itf-fi-ml/shared/users/poyenyt/slice-and-view/cauliflower3
+support_imgs_dir: ${original_work_dir}/test_data/cauliflower3_plaquette/image
+support_annots_dir: ${original_work_dir}/test_data/cauliflower3_plaquette/annotation
 output_dir: ${save_dir}/outputs
 
 # change the default directory of hydra output
@@ -33,9 +37,9 @@ model:
     
 annotator:
     down_sampling: 2
-    patch_width: 256
-    patch_height: 256
-    margin: 24
+    patch_width: 224
+    patch_height: 224
+    margin: 32
     batch_size: 3
 
 

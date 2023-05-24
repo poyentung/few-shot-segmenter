@@ -3,6 +3,7 @@ import torch.nn as nn
 import pytorch_lightning as pl
 import torch
 from torchvision.models import vgg, vit_b_16
+from .loss import FocalDiceLoss
 from .base_module import BaseModule, set_greyscale_weights, TimeDistributed, GlobalAveragePooling2D
 
 class FewShotSegmenter(BaseModule):
@@ -13,6 +14,9 @@ class FewShotSegmenter(BaseModule):
                  weight_decay:float=1e-5
                 ):
         super().__init__(backbone, optimizer, learning_rate, weight_decay)
+        
+        self.criterion = FocalDiceLoss(lmbda=0.9)
+        
         def building_blocks_trans(in_dim, out_dim, filter_size=3,stride=1,padding=0):
             return nn.Sequential(nn.ConvTranspose2d(in_dim, out_dim, filter_size, stride=stride, padding=padding),
                                  nn.InstanceNorm2d(out_dim),

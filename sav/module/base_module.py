@@ -1,5 +1,6 @@
 import torch
 import torch.nn as nn
+import torch.nn.functional as F
 import pandas as pd
 from torchvision import transforms
 from torchvision.models import vgg, resnet
@@ -22,7 +23,6 @@ class BaseModule(pl.LightningModule):
         self.weight_decay = weight_decay
         self.criterion = nn.BCEWithLogitsLoss()
         self.calculate_IoU = BinaryJaccardIndex(threshold=0.5)
-        
     
     def forward(self, query_img, support_imgs, support_annots):
         return NotImplementedError
@@ -36,7 +36,7 @@ class BaseModule(pl.LightningModule):
         query_annot_hat = self(query_img, support_imgs, support_annots)
 
         loss = self.criterion(query_annot_hat, query_annot)
-        iou = self.calculate_IoU(query_annot_hat, query_annot)
+        iou = self.calculate_IoU(F.sigmoid(query_annot_hat), query_annot)
 
         metrics = {
             'loss':loss,

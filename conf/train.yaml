@@ -16,7 +16,7 @@ defaults:
 original_work_dir: ${hydra:runtime.cwd}
 
 # path to folder with data & define model name
-model_name: _cauliflower_6_slices
+model_name: _cauliflower3_filled_scale_0.25-0.75
 save_dir: ${original_work_dir}/${model_name}
 
 # change the default directory of hydra output
@@ -27,13 +27,13 @@ model:
     backbone: vgg16
 
 trainer:
-    max_epochs: 5
+    max_epochs: 300
     resume_from_checkpoint: null
 
 logger:
     wandb:
         save_dir: ${save_dir}/lightning_logs
-        project: slice-and-view_avgpool
+        project: slice-and-view_cauliflower3
 
 
 datamodule:
@@ -50,7 +50,7 @@ datamodule:
     # Data augmentation
     contrast: [0.5,1.5]
     rotation_degrees: 90.0
-    scale: [0.25,1.0]
+    scale: [0.25,0.75]
     crop_size: 256
 
 
