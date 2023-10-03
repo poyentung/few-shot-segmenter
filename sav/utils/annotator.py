@@ -10,7 +10,7 @@ from rich.progress import track
 from typing import Union, List, Dict, Tuple, AnyStr
 from sav.module.fs_segmenter import FewShotSegmenter
 from sav.datamodule import DatasetSAV
-from sav.utils.utils import downsample_and_pad
+from sav.utils.utils import downsample_and_pad, unpad_and_upsample
 import matplotlib.pyplot as plt
 
 class Annotator:
@@ -24,6 +24,8 @@ class Annotator:
                  patch_height:int=256,
                  margin:int=28,
                  batch_size:int=3,
+                 keep_dim:bool=False,
+                 save_init_imgs:bool=True,
                 ):
         
         self.device = "cuda" if torch.cuda.is_available() else model.device
@@ -40,19 +42,23 @@ class Annotator:
         self.down_sampling = down_sampling
         self.margin = margin
         self.batch_size = batch_size
+        self.keep_dim = keep_dim
+        self.save_init_imgs= save_init_imgs
     
     def __call__(self, 
                  query_img_path:Union[Path, List[Path]],
                  support_imgs_dir:Union[Path, AnyStr],
                  support_annots_dir:Union[Path, AnyStr],
                  batch_size:int=None,
+                 keep_dim:bool=None,
                  save_dir:Union[Path, AnyStr]=None):
         
         batch_size = self.batch_size if batch_size is None else batch_size
+        keep_dim = self.keep_dim if keep_dim is None else keep_dim
         
         # the query_img_path is a single image
         if query_img_path.endswith('.tiff'):
-            return self.detect(query_img_path, support_imgs_dir, support_annots_dir, batch_size)
+            return self.detect(query_img_path, support_imgs_dir, support_annots_dir, batch_size, keep_dim)
         
         # the query_img_path is folder containing multiple images to be segmented
         else:
@@ -67,32 +73,35 @@ class Annotator:
                 out = self.detect(_img_path, 
                                   support_imgs_dir, 
                                   support_annots_dir,
-                                  batch_size)
+                                  batch_size,
+                                  keep_dim)
                 recon_img = Image.fromarray(np.where(out['annot']>0.5,255,0).astype(np.int8)).convert('L')
                 resized_img = Image.fromarray(out['raw'])
                 
                 mask_dir = os.path.join(save_dir,'mask')
-                rescale_img_dir = os.path.join(save_dir,'resized_img')
-                
                 if not os.path.exists(mask_dir):os.makedirs(mask_dir)
-                if not os.path.exists(rescale_img_dir):os.makedirs(rescale_img_dir)
                 
                 img_name = os.path.basename(_img_path).split('.')[0]
                 recon_img.save(os.path.join(mask_dir, img_name+'_mask.tiff'))
-                resized_img.save(os.path.join(rescale_img_dir, img_name+'.tiff'))
+                
+                if self.save_init_imgs:
+                    rescale_img_dir = os.path.join(save_dir,'resized_img')
+                    if not os.path.exists(rescale_img_dir):os.makedirs(rescale_img_dir)
+                    resized_img.save(os.path.join(rescale_img_dir, img_name+'.tiff'))
     
     def detect(self, 
                query_img_path:Union[Path, AnyStr],
                support_imgs_dir:Union[Path, AnyStr],
                support_annots_dir:Union[Path, AnyStr],
-               batch_size:int):
+               batch_size:int,
+               keep_dim:bool=False):
         
         # process padding and resizing the image
         query_imgs_init = Image.open(query_img_path)
-        query_imgs_init = downsample_and_pad(query_imgs_init, (self.patch_width, self.patch_height), self.down_sampling)
-        ncol, nrow = query_imgs_init.size[0]//self.patch_width, query_imgs_init.size[1]//self.patch_height
+        query_imgs_resized = downsample_and_pad(query_imgs_init, (self.patch_width, self.patch_height), self.down_sampling)
+        ncol, nrow = query_imgs_resized.size[0]//self.patch_width, query_imgs_resized.size[1]//self.patch_height
         
-        query_imgs = self.create_patches(query_imgs_init, self.patch_width, self.patch_height, self.margin)
+        query_imgs = self.create_patches(query_imgs_resized, self.patch_width, self.patch_height, self.margin)
         query_imgs = torch.stack([self.transform(img) for img in query_imgs])
         
         support_imgs = self.get_imgs(support_imgs_dir) # return a list of PIL.Image images
@@ -122,8 +131,16 @@ class Annotator:
                                          margin=self.margin,
                                          n_row=nrow,
                                          n_col=ncol)
-        return {'raw': np.array(query_imgs_init),
-                'annot':recon_img}
+        if keep_dim == False:
+            return {'raw': np.array(query_imgs_resized),
+                    'annot':recon_img}
+        else:
+            recon_img = unpad_and_upsample(img=recon_img,
+                                           up_sampling=self.down_sampling,
+                                           init_size=query_imgs_init.size)
+            return {'raw': np.array(query_imgs_init),
+                    'annot':recon_img}
+            
     
     @classmethod
     def get_imgs(cls, img_dir:Union[Path, AnyStr])-> List["PIL.Image"]:

@@ -54,5 +54,29 @@ def downsample_and_pad(img: "PIL.Image",
     width, height = resized_img.size
     size_width = patch_size[0]*(width//patch_size[0]+1)
     size_height = patch_size[1]*(height//patch_size[1]+1)
-    padded_img = ImageOps.pad(resized_img, size=(size_width, size_height))
+    # padded_img = ImageOps.pad(resized_img, size=(size_width, size_height))
+    padded_img = ImageOps.pad(resized_img, size=(size_width, height))
+    padded_img = ImageOps.pad(padded_img, size=(size_width, size_height))
     return padded_img
+
+def unpad_and_upsample(img: "PIL.Image", 
+                       up_sampling:int,
+                       init_size:Tuple[int,int],
+                      ) -> "PIL.Image":
+    img = Image.fromarray(img)
+    width, height = img.size
+    width, height = width*up_sampling, height*up_sampling
+    upsampled_img = img.resize((width, height),Image.Resampling.BILINEAR)
+    
+    unpad_width, unpad_height = init_size
+    
+    left = (width - unpad_width)/2
+    top = (height - unpad_height)/2
+    right = (width + unpad_width)/2
+    bottom = (height + unpad_height)/2
+
+    # Crop the center of the image
+    cropped_img = upsampled_img.crop((left, top, right, bottom))
+    
+    
+    return np.array(cropped_img)
