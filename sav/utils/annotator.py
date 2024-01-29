@@ -26,8 +26,11 @@ class Annotator:
                  batch_size:int=3,
                  keep_dim:bool=False,
                  save_init_imgs:bool=True,
+                 cuda_device=0,
                 ):
         
+        if torch.cuda.is_available():
+            torch.cuda.set_device(cuda_device)
         self.device = "cuda" if torch.cuda.is_available() else model.device
         self.model = model.to(device=self.device)
         
@@ -67,7 +70,7 @@ class Annotator:
             elif not os.path.exists(save_dir):
                 os.makedirs(save_dir)
                 
-            query_img_paths = sorted([os.path.join(query_img_path, _img_path) for _img_path in os.listdir(query_img_path) if '.tiff' in _img_path])
+            query_img_paths = sorted([os.path.join(query_img_path, _img_path) for _img_path in os.listdir(query_img_path) if ('.tiff' in _img_path) and (not _img_path.startswith('._'))])
             
             for _img_path in track(query_img_paths, description="Segementing"):
                 out = self.detect(_img_path, 
@@ -120,8 +123,8 @@ class Annotator:
                 support_imgs, support_annots = support_imgs[:batch.size(0)], support_annots[:batch.size(0)]
             batch_annot_hat = self.model(query_img=batch.to(self.device), 
                                          support_imgs=support_imgs.to(self.device), 
-                                         support_annots=support_annots.to(self.device))
-            query_annot_hat.append(batch_annot_hat.detach().cpu())
+                                         support_annots=support_annots.to(self.device)).detach().cpu()
+            query_annot_hat.append(batch_annot_hat)
             
         query_annot_hat = torch.cat(query_annot_hat, dim=0)
         query_annot_hat_binary = torch.where(query_annot_hat>0.5,1.0,0.0).squeeze().detach().cpu().numpy()

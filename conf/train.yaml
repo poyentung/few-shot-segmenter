@@ -16,7 +16,7 @@ defaults:
 original_work_dir: ${hydra:runtime.cwd}
 
 # path to folder with data & define model name
-model_name: _cauliflower3_filled_scale_0.25-0.75
+model_name: _NLM9-2_fram_plaque
 save_dir: ${original_work_dir}/${model_name}
 
 # change the default directory of hydra output
@@ -25,15 +25,17 @@ hydra:
 
 model:
     backbone: vgg16
+    weight_decay: 1e-4
 
 trainer:
-    max_epochs: 300
+    max_epochs: 150
+    devices: [6]
     resume_from_checkpoint: null
 
 logger:
     wandb:
         save_dir: ${save_dir}/lightning_logs
-        project: slice-and-view_cauliflower3
+        project: slice-and-view_cauliflower_nlm9
 
 
 datamodule:
@@ -44,19 +46,20 @@ datamodule:
 
     # hyperparams
     val_data_ratio: 0.15
-    batch_size: 5
-    n_cpu: 4
+    batch_size: 8
+    n_cpu: 8
 
     # Data augmentation
     contrast: [0.5,1.5]
     rotation_degrees: 90.0
-    scale: [0.25,0.75]
+    scale: [0.2,0.3]
     crop_size: 256
 
 
 callbacks:
     model_checkpoint:
-        save_top_k: 20
+        save_top_k: 5
+        every_n_epochs: 15
         monitor: "val/val_loss" # name of the logged metric which determines when model is improving
         dirpath: ${save_dir}/checkpoints/${model_name}
         filename: "{epoch:02d}_{val/val_loss:.3f}"

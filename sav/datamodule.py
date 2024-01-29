@@ -126,7 +126,7 @@ class DatasetSAV(Dataset):
             self.image_copy_paste[key]=ImageCopyPaste(base_path=self.base_path, 
                                                       transform=self.random_rotation_crop[key],
                                                       normalize=self.normalize,
-                                                      p=0.2)
+                                                      p=0.15)
     
     def __len__(self):
         return self.nsamples
