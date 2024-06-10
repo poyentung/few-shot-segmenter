@@ -1,6 +1,7 @@
 import os
-import numpy as np
 import torch
+import numpy as np
+import pandas as pd
 from torchvision import transforms
 from torch.utils.data import DataLoader
 from torchvision import transforms
@@ -12,6 +13,7 @@ from sav.module.fs_segmenter import FewShotSegmenter
 from sav.datamodule import DatasetSAV
 from sav.utils.utils import downsample_and_pad, unpad_and_upsample
 import matplotlib.pyplot as plt
+from .utils import calculate_iou_with_truth, iou
 
 class Annotator:
     def __init__(self, 
@@ -72,7 +74,7 @@ class Annotator:
                 
             query_img_paths = sorted([os.path.join(query_img_path, _img_path) for _img_path in os.listdir(query_img_path) if ('.tiff' in _img_path) and (not _img_path.startswith('._'))])
             
-            for _img_path in track(query_img_paths, description="Segementing"):
+            for _img_path in track(query_img_paths, description="[Segementing]"):
                 out = self.detect(_img_path, 
                                   support_imgs_dir, 
                                   support_annots_dir,
@@ -212,3 +214,17 @@ class Annotator:
                 reconstructed_image.paste(patch, (i*patch_width, j*patch_height))
 
         return np.array(reconstructed_image)
+    
+    @classmethod
+    def benchmark_iou(cls, 
+                      pred_annots_path:Union[Path, AnyStr],
+                      truth_annots_path:Union[Path, AnyStr], 
+                      img_indices:Tuple[int,int,int,int],
+                      save_csv_name:str=None):
+        
+        iou = calculate_iou_with_truth(pred_annots_path,
+                                        truth_annots_path,
+                                        img_indices=img_indices)
+            
+        if save_csv_name is not None: pd.DataFrame(dict(iou=iou)).to_csv(save_csv_name)
+        return iou

@@ -26,6 +26,7 @@ class DatamoduleSAV(pl.LightningDataModule):
                  rotation_degrees:float=90.0,
                  scale:Tuple[float,float]=(0.8,1.2),
                  crop_size:float=512,
+                 copy_paste_prob:float=0.15,
                  val_data_ratio:float=0.15,
                  batch_size:int=20,
                  n_cpu:int=4,
@@ -39,7 +40,7 @@ class DatamoduleSAV(pl.LightningDataModule):
         self.n_cpu = n_cpu
         self.img_sizes = get_img_sizes(datapath)# e.g., {'cauliflower':(2048,1536),'apollo_70017':(1004,1024)}
         self.dataset_full = DatasetSAV(datapath, nshot, nsamples, self.img_sizes, contrast, 
-                                       vflip_p, hflip_p, rotation_degrees, scale, crop_size)
+                                       vflip_p, hflip_p, rotation_degrees, scale, crop_size, copy_paste_prob)
     
     def setup(self, stage = None):
         if stage == "fit" or stage is None:
@@ -87,6 +88,7 @@ class DatasetSAV(Dataset):
                  rotation_degrees:float=90.0,
                  scale:Tuple[float,float]=(0.8,1.2),
                  crop_size:float=512,
+                 copy_paste_prob:float=0.15,
                 ):
         """
         Args:
@@ -112,6 +114,7 @@ class DatasetSAV(Dataset):
         self.base_path = datapath
         self.nshot = nshot
         self.nsamples = nsamples
+        self.copy_paste_prob = copy_paste_prob
         
         self.specimen_names = [sample for sample in os.listdir(self.base_path) if '.' not in sample]
         
@@ -126,7 +129,7 @@ class DatasetSAV(Dataset):
             self.image_copy_paste[key]=ImageCopyPaste(base_path=self.base_path, 
                                                       transform=self.random_rotation_crop[key],
                                                       normalize=self.normalize,
-                                                      p=0.15)
+                                                      p=self.copy_paste_prob)
     
     def __len__(self):
         return self.nsamples
@@ -150,7 +153,7 @@ class DatasetSAV(Dataset):
         query_transformed = self.random_rotation_crop[specimen_name](query_img, query_annot)
         query_img, query_annot = query_transformed['img'], query_transformed['annot']
         query_img = self.normalize(query_img) # size = [1,512,512]
-        
+
         # apply copy_paste
         query_img, query_annot = self.image_copy_paste[specimen_name](query_img, query_annot, specimen_phase_name)
         

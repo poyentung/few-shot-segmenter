@@ -8,23 +8,37 @@ defaults:
   - override hydra/hydra_logging: colorlog
 
 # path to original working directory
-# hydra hijacks working directory by changing it to the new log directory
+# hydra hijacks working directory by changing _it to the new log directory
 # https://hydra.cc/docs/next/tutorials/basic/running_your_app/working_directory
 original_work_dir: ${hydra:runtime.cwd}
 
+#phase
+phase: plaquette
+
+#model name
+model_name: _5shot_3slice
+
+# default name for the experiment, determines logging folder path
+# (you can overwrite this name in experiment configs)
+name: ${model_name}_${phase}
+
 # path to directory where images are saved 
-save_dir: /itf-fi-ml/shared/users/poyenyt/slice-and-view/NLM9-2_output_framboid
+save_dir: /itf-fi-ml/shared/users/poyenyt/slice-and-view/${name}
+# /scratch/users/poyenyt/slice-and-view/${name}
 
 #${original_work_dir}/test_data/cauliflower2_magnetite_mask
 
 # checkpoint path of the lightning module
-ckpt_path: ${original_work_dir}/_NLM9-2_fram_plaque/checkpoints/_NLM9-2_fram_plaque/149_0.056.ckpt
+ckpt_path: ${original_work_dir}/_benchmark/${model_name}/checkpoints/${model_name}/last.ckpt
 
 # path for segmentation
-query_img_path: /itf-fi-ml/shared/users/poyenyt/slice-and-view/NLM9_2
-support_imgs_dir: ${original_work_dir}/test_data/NLM9-2/framboid/image
-support_annots_dir: ${original_work_dir}/test_data/NLM9-2/framboid/annotation
+query_img_path: /itf-fi-ml/shared/users/poyenyt/slice-and-view/NLM9
+support_imgs_dir: ${original_work_dir}/test_data/NLM9/0.25_256x256/${phase}/image
+support_annots_dir: ${original_work_dir}/test_data/NLM9/0.25_256x256/${phase}/annotation
 output_dir: ${save_dir}/outputs
+
+# benchmarking
+truth_annots_dir: /itf-fi-ml/shared/users/poyenyt/slice-and-view/NLM9_truth_mask/NLM_3phrases_${phase}_binary_mask_human_corrected
 
 # change the default directory of hydra output
 hydra:
@@ -38,7 +52,7 @@ annotator:
     patch_width: 224
     patch_height: 224
     margin: 32
-    batch_size: 10
+    batch_size: 12
     keep_dim: True
     save_init_imgs: False
     cuda_device: 0
@@ -54,6 +68,4 @@ ignore_warnings: True
 # lightning chooses best weights based on the metric specified in checkpoint callback
 test: False
 
-# default name for the experiment, determines logging folder path
-# (you can overwrite this name in experiment configs)
-name: "default"
+

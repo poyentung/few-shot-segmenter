@@ -1,8 +1,10 @@
 import os
 import numpy as np
+import pandas as pd
 from pathlib import Path
 from typing import Union, Dict, Tuple, AnyStr
 from PIL import Image, ImageOps
+from rich.progress import track
 
 
 def sampling_from_dir(path:Union[Path, AnyStr])->Union[Path, AnyStr]:
@@ -80,3 +82,31 @@ def unpad_and_upsample(img: "PIL.Image",
     
     
     return np.array(cropped_img)
+
+def get_file_paths(path):
+    file_names = os.listdir(path)
+    file_names = [f for f in file_names if not f.startswith('.')]
+    file_names = sorted(file_names)
+    return [os.path.join(path, filename) for filename in file_names]
+
+def images_to_array(images_paths: "numpy.ndarray"):
+    # concaternate all images along axis = 1 and add the channel axis
+    return [np.asarray(Image.open(path))[:,:,np.newaxis] for path in images_paths]
+
+def iou(y_true, y_pred):
+    # y_true and y_pred are numpy arrays of the same shape
+    # containing binary values (0 or 1)
+    intersection = np.logical_and(y_true, y_pred).sum()
+    union = np.logical_or(y_true, y_pred).sum()
+    iou = intersection / (union + 1e-15) # avoid division by zero
+    return iou
+        
+def calculate_iou_with_truth(truth_folder_path, pred_folder_path, img_indices=None):
+    pred_mask_files = get_file_paths(pred_folder_path)
+    truth_files = get_file_paths(truth_folder_path)
+    iou_values = []
+    for pred, truth in track(zip(pred_mask_files, truth_files), description="[Calculating IoU]"):
+        pred = np.asarray(Image.open(pred)) if img_indices==None else np.asarray(Image.open(pred))[img_indices[0]:img_indices[1], img_indices[2]:img_indices[3]]
+        truth = np.asarray(Image.open(truth)) if img_indices==None else np.asarray(Image.open(truth))[img_indices[0]:img_indices[1], img_indices[2]:img_indices[3]]
+        iou_values.append(iou(truth, pred))
+    return np.array(iou_values)
