@@ -12,11 +12,11 @@ defaults:
 # https://hydra.cc/docs/next/tutorials/basic/running_your_app/working_directory
 original_work_dir: ${hydra:runtime.cwd}
 
-#phase
-phase: plaquette
+# phase
+phase: cauliflower
 
 #model name
-model_name: _5shot_3slice
+model_name: test #_5shot_3slice
 
 # default name for the experiment, determines logging folder path
 # (you can overwrite this name in experiment configs)
@@ -29,7 +29,7 @@ save_dir: /itf-fi-ml/shared/users/poyenyt/slice-and-view/${name}
 #${original_work_dir}/test_data/cauliflower2_magnetite_mask
 
 # checkpoint path of the lightning module
-ckpt_path: ${original_work_dir}/_benchmark/${model_name}/checkpoints/${model_name}/last.ckpt
+ckpt_path: ${original_work_dir}/${model_name}/checkpoints/${model_name}/last.ckpt #${original_work_dir}/_benchmark/${model_name}/checkpoints/${model_name}/last.ckpt
 
 # path for segmentation
 query_img_path: /itf-fi-ml/shared/users/poyenyt/slice-and-view/NLM9

@@ -1,5 +1,5 @@
 defaults:
-  - model: default.yaml
+  - model: default.yaml #default.yaml
   - datamodule: default.yaml
   - callbacks: default.yaml
   - logger: wandb.yaml # set logger here or use command line (e.g. `python train.py logger=tensorboard`)
@@ -16,7 +16,7 @@ defaults:
 original_work_dir: ${hydra:runtime.cwd}
 
 # path to folder with data & define model name
-model_name: _5shot_3slice
+model_name: test
 save_dir: ${original_work_dir}/${model_name}
 
 # change the default directory of hydra output
@@ -25,11 +25,10 @@ hydra:
 
 model:
     backbone: vgg16
-    weight_decay: 1e-4
 
 trainer:
-    max_epochs: 150
-    devices: [3]
+    max_epochs: 1
+    devices: [0]
     resume_from_checkpoint: null
 
 logger:
@@ -41,12 +40,12 @@ logger:
 datamodule:
     # Configuration
     datapath: ${original_work_dir}/data
-    nshot: 5
+    nshot: 3
     nsamples: 500
 
     # hyperparams
     val_data_ratio: 0.15
-    batch_size: 8
+    batch_size: 5
     n_cpu: 8
 
     # Data augmentation
