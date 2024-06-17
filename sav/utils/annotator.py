@@ -2,18 +2,14 @@ import os
 import torch
 import numpy as np
 import pandas as pd
-from torchvision import transforms
-from torch.utils.data import DataLoader
-from torchvision import transforms
-from PIL import Image, ImageOps
 from pathlib import Path
 from rich.progress import track
-from typing import Union, List, Dict, Tuple, AnyStr
+from PIL import Image, ImageOps
+from torchvision import transforms
+from torch.utils.data import DataLoader
+from typing import Union, List, Tuple, AnyStr
 from sav.module.fs_segmenter import FewShotSegmenter
-from sav.datamodule import DatasetSAV
-from sav.utils.utils import downsample_and_pad, unpad_and_upsample
-import matplotlib.pyplot as plt
-from .utils import calculate_iou_with_truth, iou
+from sav.utils.utils import downsample_and_pad, unpad_and_upsample, calculate_iou_with_truth
 
 class Annotator:
     def __init__(self, 

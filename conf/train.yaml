@@ -17,7 +17,7 @@ original_work_dir: ${hydra:runtime.cwd}
 
 # path to folder with data & define model name
 model_name: test
-save_dir: ${original_work_dir}/${model_name}
+save_dir: ${original_work_dir}/results/${model_name}
 
 # change the default directory of hydra output
 hydra:
@@ -39,7 +39,7 @@ logger:
 
 datamodule:
     # Configuration
-    datapath: ${original_work_dir}/data
+    datapath: ${original_work_dir}/demo_data/train
     nshot: 3
     nsamples: 500
 
