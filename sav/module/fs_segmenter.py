@@ -1,11 +1,19 @@
 import torch
 import torch.nn as nn
-import pytorch_lightning as pl
-import torch
 from torchvision.models import vgg, vit_b_16
+from torchvision.models.segmentation import (
+    deeplabv3_resnet50, 
+    deeplabv3_resnet101,
+    deeplabv3_mobilenet_v3_large
+)
 from .loss import FocalDiceLoss
-from .base_module import BaseModule, set_greyscale_weights, TimeDistributed, GlobalAveragePooling2D
-
+from .base_module import (
+    BaseModule, 
+    DeepLabV3Module,
+    set_greyscale_weights, 
+    TimeDistributed, 
+    GlobalAveragePooling2D
+)
 class FewShotSegmenter(BaseModule):
     def __init__(self, 
                  backbone:str='vgg16', 
@@ -138,3 +146,36 @@ class FewShotSegmenter(BaseModule):
         
         return {'query_img_encoded'   :query_img_encoded,                 # size = [bs,768,14,14]
                 'support_imgs_encoded':torch.stack(support_imgs_encoded)} # size = [bs,3,768,14,14]
+    
+class DeepLabV3(DeepLabV3Module):
+    def __init__(self, 
+                 backbone:str='deeplabv3_resnet50', 
+                 optimizer:str='adam', 
+                 learning_rate:float=1e-4, 
+                 weight_decay:float=1e-5
+                ):
+        super().__init__(backbone, optimizer, learning_rate, weight_decay)
+        
+        self.criterion = FocalDiceLoss(lmbda=0.9)
+        
+        # Backbone network initialization
+        if backbone == 'deeplabv3_resnet50':
+            self.model = deeplabv3_resnet50()
+            self.model.backbone.conv1 = nn.Conv2d(1, 64, kernel_size=7, stride=2, padding=3, bias=False)
+            self.model.classifier[4] = nn.Conv2d(256, 1, kernel_size=1, stride=1)
+            
+        elif backbone == 'deeplabv3_resnet101':
+            self.model = deeplabv3_resnet101()
+            self.model.backbone.conv1 = nn.Conv2d(1, 64, kernel_size=7, stride=2, padding=3, bias=False)
+            self.model.classifier[4] = nn.Conv2d(256, 1, kernel_size=1, stride=1)
+            
+        elif backbone == 'deeplabv3_mobilenet_v3_large':
+            self.model = deeplabv3_mobilenet_v3_large()
+            self.model.backbone['0'][0] = nn.Conv2d(1, 16, kernel_size=3, stride=2, padding=1, bias=False)
+            self.model.classifier[4] = nn.Conv2d(256, 1, kernel_size=1, stride=1)
+            
+        else:
+            raise Exception(f'Unavailable backbone: {backbone}')
+        
+    def forward(self, query_img):
+        return self.model(query_img)['out']

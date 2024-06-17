@@ -1,0 +1,18 @@
+_target_: sav.datamodule.DatamoduleDeepLabV3
+    
+# Configuration
+datapath: data
+nsamples: 500
+
+# hyperparams
+val_data_ratio: 0.15
+batch_size: 5
+n_cpu: 4
+
+# Data augmentation
+contrast: [0.5,1.5]
+rotation_degrees: 90.0
+scale: [0.25,1.0]
+crop_size: 256
+copy_paste_prob: 0.15
+
