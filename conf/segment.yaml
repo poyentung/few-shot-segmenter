@@ -56,7 +56,7 @@ annotator:
     batch_size: 5
     keep_dim: True
     save_init_imgs: False
-    cuda_device: 7
+    cuda_device: 0
 
 
 # pretty print config at the start of the run using Rich library
