@@ -1,13 +1,17 @@
 ## Few-shot-segementer
 
-`few-shot-segmenter` is an open-source Python code for complex microstructure segmentation, mainly built with [Pytorch](https://pytorch.org/) and [Scikit-learn](https://scikit-learn.org/stable/). We benchmark this model against [Trainable Weka Segmentation](https://academic.oup.com/bioinformatics/article/33/15/2424/3092362?login=true) and [DeepLabV3-ResNet-50](https://arxiv.org/abs/1606.00915) on a 3D tomographic carbonaceous chondrite meteorite dataset. We use the metric of Intersection of Union (IoU) calculated between the model prediction and the ground truth along 1000 images in the dataset.
+`few-shot-segmenter` is an open-source Python code for complex microstructure segmentation, mainly built with [Pytorch](https://pytorch.org/) and [Scikit-learn](https://scikit-learn.org/stable/). 
 
+
+We benchmark this model against [Trainable Weka Segmentation](https://academic.oup.com/bioinformatics/article/33/15/2424/3092362?login=true) and [DeepLabV3-ResNet-50](https://arxiv.org/abs/1606.00915) on a 3D tomographic carbonaceous chondrite meteorite dataset. We use the metric of Intersection of Union (IoU) calculated between the model prediction and the ground truth along 1000 images in the dataset.<br />
 
 | Model           | Framboid   | Plaquette  | Cauliflower | Average     |
 | :-------------- | :--------: | :--------: | :---------: | :---------: |
 | Trainable Weka  | 68.42      | 17.70      | 12.65       | 35.17       |
 | ResNet-50       | 65.02      | 38.34      | 70.14       | 57.83       |
 | 5-shot          | **94.05**  | **71.24**  | **76.59**   | **80.62**   |
+
+<br />
 
 <div align="center">
     <img src="assets/benchmark_results.png" /> 
@@ -127,6 +131,8 @@ We can also segment multiple phases in a run:
 ```
 python segment.py --multirun phase=framboid,plaquette,cauliflower
 ```
+
+See the [example notebook](few-shot-segementer/few_shot_segmentation.ipynb) on few-shot-segemnter model training and predictions for more details.
 
 ## License
 Few-shot-segmenter is released under the [GPL-3.0 license](few-shot-segementer/LICENSE).
