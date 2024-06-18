@@ -22,8 +22,8 @@ We benchmark this model against [Trainable Weka Segmentation](https://academic.o
 
 Qualitative analysis on the segmentation results done by different models.
 
-<div align="center">
-    <img src="assets/benchmark_results.png" /> 
+<div align="left">
+    <img width=80% src="assets/benchmark_results.png" /> 
 </div><br />
 
 
