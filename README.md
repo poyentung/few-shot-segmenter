@@ -2,6 +2,7 @@
 
 `few-shot-segmenter` is an open-source Python code for complex microstructure segmentation, mainly built with [Pytorch](https://pytorch.org/) and [Scikit-learn](https://scikit-learn.org/stable/). 
 
+## Benchmarks
 
 We benchmark this model against [Trainable Weka Segmentation](https://academic.oup.com/bioinformatics/article/33/15/2424/3092362?login=true) and [DeepLabV3-ResNet-50](https://arxiv.org/abs/1606.00915) on a 3D tomographic carbonaceous chondrite meteorite dataset. We use the metric of Intersection of Union (IoU) calculated between the model prediction and the ground truth along 1000 images in the dataset.<br />
 
@@ -12,6 +13,14 @@ We benchmark this model against [Trainable Weka Segmentation](https://academic.o
 | 5-shot          | **94.05**  | **71.24**  | **76.59**   | **80.62**   |
 
 <br />
+
+3D visualisation of the segmentation results using [Dragonfly](https://www.theobjects.com/dragonfly/).
+
+<div align="center">
+  <img src="assets/3d_visualisation.gif">  
+</div><br />
+
+Qualitative analysis on the segmentation results done by different models.
 
 <div align="center">
     <img src="assets/benchmark_results.png" /> 
@@ -85,7 +94,7 @@ datapath/
 ```
 
 #### 2. Setup configuration file 
-All the config parameters for training modules are saved in the folder [conf/](few-shot-segmenter/conf/), and overidden by `train.yaml` and `train.yaml`. For example, we can set the data augmentation of the datamodule in [train.yaml](few-shot-segmenter/conf/train.yaml):
+All the config parameters for training modules are saved in the folder [conf/](few-shot-segmenter/conf/), and overidden by `train.yaml` and `train.yaml`. For example, we can set the data augmentation of the datamodule in [train.yaml](conf/train.yaml):
 ```
 ......
 
@@ -122,7 +131,7 @@ python train.py model_name=test2 datamodule.nshot=5 datamodule.batch_size=10
 ```
 
 #### 4. Evaluation
-We only segment single phase each time when we call the function. Please note that this process is GPU-memory-intensive - please reduce the number of `annotator.batch_size` if the relevant error is present. The specified `phase` in the commandline is the filename in the [data folder](few-shot-segmenter/demo_data/train/carbon-chondrite-3slice). For example, if we want to segment `cauliflower` with the model `test` (specified as model_name in the `yaml` file) and a batch_size of 5, we can run:
+We only segment single phase each time when we call the function. Please note that this process is GPU-memory-intensive - please reduce the number of `annotator.batch_size` if the relevant error is present. The specified `phase` in the commandline is the filename in the [data folder](demo_data/train/carbon-chondrite-3slice). For example, if we want to segment `cauliflower` with the model `test` (specified as model_name in the `yaml` file) and a batch_size of 5, we can run:
 ```
 python segment.py model_name=test phase=cauliflower annotator.batch_size=5
 ```
@@ -132,7 +141,7 @@ We can also segment multiple phases in a run:
 python segment.py --multirun phase=framboid,plaquette,cauliflower
 ```
 
-See the [example notebook](few-shot-segementer/few_shot_segmentation.ipynb) on few-shot-segemnter model training and predictions for more details.
+See the [example notebook](few_shot_segmentation.ipynb) on few-shot-segemnter model training and predictions for more details.
 
 ## License
-Few-shot-segmenter is released under the [GPL-3.0 license](few-shot-segementer/LICENSE).
+Few-shot-segmenter is released under the [GPL-3.0 license](LICENSE).
