@@ -1,33 +1,48 @@
-## Few-shot-segementer
+# Few-shot-segementer
 
 `few-shot-segmenter` is an open-source Python code for complex microstructure segmentation, mainly built with [**Pytorch**](https://pytorch.org/) and [**Scikit-learn**](https://scikit-learn.org/stable/). It is <br />
+
+# Benchmark
+We benchmark this model against [Trainable Weka Segmentation](https://academic.oup.com/bioinformatics/article/33/15/2424/3092362?login=true) and [DeepLabV3-ResNet-50](https://arxiv.org/abs/1606.00915) on a 3D tomographic carbonaceous chondrite meteorite dataset. We use the metric of Intersection of Union (IoU) calculated between the model prediction and the ground truth along 1000 images in the dataset.
+
+
+| Model           | Framboid   | Plaquette  | Cauliflower | Average     |
+| :-------------- | :--------: | :--------: | :---------: | :---------: |
+| Trainable Weka  | 68.42      | 17.70      | 12.65       | 35.17       |
+| ResNet-50       | 65.02      | 38.34      | 70.14       | 57.83       |
+| 5-shot          | **94.05**  | **71.24**  | **76.59**   | **80.62**   |
 
 <div align="center">
     <img src="assets/benchmark_results.png" /> 
 </div><br />
 
 
-## Installation
+# Installation
 
-1. Create a [**Python>=3.9**](https://www.python.org/) environment with [**Conda**](https://docs.conda.io/en/latest/):
+### 1. Environment setup
+Create a [Python>=3.9](https://www.python.org/) environment with [Conda](https://docs.conda.io/en/latest/):
 ```
 conda create -n fewshot python=3.9
 conda activate fewshot
 ```
 
-2. Install **Few-shot-segmenter** with [**pip**](https://pypi.org/project/pip/):
+### 2. Installation 
+Build **few-shot-segmenter** from source using [pip](https://pypi.org/project/pip/):
 ```
 python -m pip install 'git+https://github.com/poyentung/few-shot-segmenter.git'
 # (add --user if you don't have permission)
+```
 
-# Or, to install it from a local clone:
+Or, to install it from a local clone:
+```
 git clone https://github.com/poyentung/few-shot-segmenter.git
 python -m pip install -e few-shot-segmenter
 ```
 
-## Getting Started
+# Getting Started
 
-1. **Prepare data and masks**. `demo_data/` folder structures all the necessary images for training and evaluation.
+### 1. Prepare data and masks
+`demo_data/` folder structures all the necessary images for training and evaluation.
 
 ```
 # Training data
@@ -42,7 +57,7 @@ datapath/
         └── ...
 ```
 ```
-# Training data
+# Evaluation data
 datapath/
     ├── query_set/  
     │       ├── iamge1.tiff
@@ -68,7 +83,8 @@ datapath/
             └── ...
 ```
 
-2. **Setup configuration file**. All the config parameters for training modules are saved in the folder [conf/](few-shot-segmenter/conf/), and overidden by `train.yaml` and `train.yaml`. For example, we can set the data augmentation of the datamodule in [train.yaml](few-shot-segmenter/conf/train.yaml):
+### 2. Setup configuration file 
+All the config parameters for training modules are saved in the folder [conf/](few-shot-segmenter/conf/), and overidden by `train.yaml` and `train.yaml`. For example, we can set the data augmentation of the datamodule in [train.yaml](few-shot-segmenter/conf/train.yaml):
 ```
 ......
 
@@ -93,7 +109,7 @@ datamodule:
 ......
 ```
 
-3. **Training**. 
+### 3. Training model
 ```
 cd few-shot-segmenter
 python train.py
@@ -104,7 +120,7 @@ We can also override some of the parameters directly on the commandline. For exa
 python train.py model_name=test2 datamodule.nshot=5 datamodule.batch_size=10
 ```
 
-4. **Evaluation**.
+### 4. Evaluation
 We only segment single phase each time we call the function. Please note that this process is GPU-memory-intensive - please reduce the number of `annotator.batch_size` if the relevant error is present. The specified `phase` in the commandline is the filename in the [data folder](few-shot-segmenter/demo_data/train/carbon-chondrite-3slice). For example, if we want to segment `cauliflower` with the model `test` (specified as model_name in the `yaml` file) and a batch_size of 5, we can run:
 ```
 python segment.py model_name=test phase=cauliflower annotator.batch_size=5
@@ -114,3 +130,6 @@ We can also segment multiple phases in a run:
 ```
 python segment.py --multirun phase=framboid,plaquette,cauliflower
 ```
+
+# License
+Few-shot-segmenter is released under the [GPL-3.0 license](few-shot-segementer/LICENSE).
