@@ -1,6 +1,6 @@
 ## Few-shot-segementer
 
-`few-shot-segmenter` is an open-source Python code for complex microstructure segmentation, mainly built with [Pytorch](https://pytorch.org/) and [Scikit-learn](https://scikit-learn.org/stable/). 
+`few-shot-segmenter` is an open-source Python code for complex microstructure segmentation, mainly built with [Pytorch](https://pytorch.org/). 
 
 ## Benchmarks
 
@@ -116,9 +116,10 @@ datamodule:
 ```
 
 #### 3. Training model
+
+Run the training with 10 epochs:
 ```
-cd few-shot-segmenter
-python train.py
+python train.py trainer.max_epoch=10
 ```
 
 We can also override some of the parameters directly on the commandline. For example,

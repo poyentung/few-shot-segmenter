@@ -2,9 +2,10 @@ import torch
 import torch.nn as nn
 import torch.nn.functional as F
 import pandas as pd
-from torchvision import transforms
-from torchvision.models import vgg, resnet
 import pytorch_lightning as pl
+from torchvision import transforms
+from torchvision.models import vgg
+from pytorch_lightning.loggers import WandbLogger
 from torchmetrics.classification import BinaryJaccardIndex
 from sav.utils.visual import log_fig, plot_evaluation
 
@@ -102,9 +103,10 @@ class BaseModule(pl.LightningModule):
         for i, class_name in enumerate(class_iou.keys()):
             metrics_list.append([class_name, class_iou[class_name]])
         
-        self.logger.log_table(key=f'metrics_per_class_{self.current_epoch}', 
-                              columns=['class_name', 'mean_iou'], 
-                              data=metrics_list)
+        if type(self.logger)==WandbLogger:
+            self.logger.log_table(key=f'metrics_per_class_{self.current_epoch}', 
+                                columns=['class_name', 'mean_iou'], 
+                                data=metrics_list)
         
         self.metrics = pd.DataFrame.from_dict(class_iou, orient='index', columns=['mean_iou'])
 
@@ -222,9 +224,10 @@ class DeepLabV3Module(pl.LightningModule):
         for i, class_name in enumerate(class_iou.keys()):
             metrics_list.append([class_name, class_iou[class_name]])
         
-        self.logger.log_table(key=f'metrics_per_class_{self.current_epoch}', 
-                              columns=['class_name', 'mean_iou'], 
-                              data=metrics_list)
+        if type(self.logger)==WandbLogger:
+            self.logger.log_table(key=f'metrics_per_class_{self.current_epoch}', 
+                                columns=['class_name', 'mean_iou'], 
+                                data=metrics_list)
         
         self.metrics = pd.DataFrame.from_dict(class_iou, orient='index', columns=['mean_iou'])
 

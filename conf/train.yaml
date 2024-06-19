@@ -27,7 +27,7 @@ model:
     backbone: vgg16
 
 trainer:
-    max_epochs: 1
+    max_epochs: 50
     devices: [0]
     resume_from_checkpoint: null
 

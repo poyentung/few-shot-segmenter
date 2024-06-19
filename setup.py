@@ -34,6 +34,7 @@ setup(
     install_requires=[
         "scipy",
         "notebook",
+        "ipywidgets",
         "jupyterlab", 
         "torch             == 2.0.0",
         "torchmetrics      == 0.10.3",
