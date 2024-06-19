@@ -40,6 +40,8 @@ setup(
         "torchvision       == 0.15.1",
         "pytorch-lightning == 1.6.0",  
         "rich              == 12.6.0",
+        "hydra-core        == 1.2.0",
+        "hydra-colorlog    == 1.2.0",
         "scikit-image      == 0.19.3",
         "scikit-learn      == 1.1.3", 
         "numpy             == 1.23.5",

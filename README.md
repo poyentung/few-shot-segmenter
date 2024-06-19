@@ -37,16 +37,12 @@ conda activate fewshot
 ```
 
 #### 2. Installation 
-Build **few-shot-segmenter** from source using [pip](https://pypi.org/project/pip/):
-```
-python -m pip install 'git+https://github.com/poyentung/few-shot-segmenter.git'
-# (add --user if you don't have permission)
-```
+Install **few-shot-segmenter** from source using [pip](https://pypi.org/project/pip/):
 
-Or, to install it from a local clone:
 ```
 git clone https://github.com/poyentung/few-shot-segmenter.git
-python -m pip install -e few-shot-segmenter
+cd few-shot-segmenter
+pip install -e ./
 ```
 
 ## Getting Started
