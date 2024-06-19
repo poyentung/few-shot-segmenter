@@ -48,6 +48,7 @@ setup(
         "numba             == 0.56.4",
         "matplotlib        == 3.6.2",
         "seaborn           == 0.12.1",
+        "wandb             == 0.13.5",
         
     ],
     python_requires=">=3.9",
