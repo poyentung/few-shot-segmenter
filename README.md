@@ -8,8 +8,8 @@ We benchmark this model against [Trainable Weka Segmentation](https://academic.o
 
 | Model           | Framboid   | Plaquette  | Cauliflower | Average     |
 | :-------------- | :--------: | :--------: | :---------: | :---------: |
-| Trainable Weka  | 68.42      | 17.70      | 12.65       | 35.17       |
-| ResNet-50       | 65.02      | 38.34      | 70.14       | 57.83       |
+| Trainable Weka  | 80.55      | 20.66      | 22.33       | 41.18       |
+| ResNet-50       | 86.24      | 41.08      | 73.90       | 67.07       |
 | 5-shot          | **94.05**  | **71.24**  | **76.59**   | **80.62**   |
 
 <br />
