@@ -160,8 +160,8 @@ class DeepLabV3(DeepLabV3Module):
         
         # Backbone network initialization
         if backbone == 'deeplabv3_resnet50':
-            self.model = deeplabv3_resnet50()
-            self.model.backbone.conv1 = nn.Conv2d(1, 64, kernel_size=7, stride=2, padding=3, bias=False)
+            self.model = deeplabv3_resnet50(weights_backbone='DEFAULT')
+            # self.model.backbone.conv1 = nn.Conv2d(1, 64, kernel_size=7, stride=2, padding=3, bias=False)
             self.model.classifier[4] = nn.Conv2d(256, 1, kernel_size=1, stride=1)
             
         elif backbone == 'deeplabv3_resnet101':
@@ -178,4 +178,6 @@ class DeepLabV3(DeepLabV3Module):
             raise Exception(f'Unavailable backbone: {backbone}')
         
     def forward(self, query_img):
+        device = query_img.device
+        query_img = torch.tile(query_img, (3,1,1)).to(device=device)
         return self.model(query_img)['out']

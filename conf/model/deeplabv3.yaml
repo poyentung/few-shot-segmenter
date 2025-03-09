@@ -1,7 +1,7 @@
 _target_: sav.module.fs_segmenter.DeepLabV3
 
 # Configuration
-backbone: deeplabv3_mobilenet_v3_large
+backbone: deeplabv3_resnet50
 optimizer: adam
 learning_rate: 1e-4
 weight_decay: 1e-5

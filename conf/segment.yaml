@@ -1,6 +1,6 @@
 defaults:
-  - model: default.yaml
-  - annotator: default.yaml
+  - model: deeplabv3.yaml
+  - annotator: deeplabv3.yaml
   - _self_
 
   # enable color logging
@@ -21,7 +21,7 @@ model_name: test #_5shot_3slice
 name: ${model_name}_${phase}
 
 # path to directory where images are saved 
-save_dir: ${original_work_dir}/results/${model_name}/${name} #/itf-fi-ml/shared/users/poyenyt/slice-and-view/${name}
+save_dir: /itf-fi-ml/shared/users/poyenyt/slice-and-view/${name} #${original_work_dir}/results/${model_name}/${name}
 # /scratch/users/poyenyt/slice-and-view/${name}
 
 #${original_work_dir}/test_data/cauliflower2_magnetite_mask
@@ -31,14 +31,18 @@ ckpt_path: ${original_work_dir}/results/${model_name}/checkpoints/${model_name}/
 #${original_work_dir}/_benchmark/${model_name}/checkpoints/${model_name}/last.ckpt
 
 # path for segmentation
-evaul_data_dir: ${original_work_dir}/demo_data/evaluation
-query_img_path: ${evaul_data_dir}/query_set #/itf-fi-ml/shared/users/poyenyt/slice-and-view/NLM9
-support_imgs_dir: ${evaul_data_dir}/support_set/${phase}/image
-support_annots_dir: ${evaul_data_dir}/support_set/${phase}/annotation
+query_img_path: /itf-fi-ml/shared/users/poyenyt/slice-and-view/NLM9
+support_imgs_dir: ${original_work_dir}/test_data/NLM9/0.25_256x256/${phase}/image
+support_annots_dir: ${original_work_dir}/test_data/NLM9/0.25_256x256/${phase}/annotation
+# evaul_data_dir: ${original_work_dir}/demo_data/evaluation
+# query_img_path: ${evaul_data_dir}/query_set #/itf-fi-ml/shared/users/poyenyt/slice-and-view/NLM9
+# support_imgs_dir: ${evaul_data_dir}/support_set/${phase}/image
+# support_annots_dir: ${evaul_data_dir}/support_set/${phase}/annotation
 output_dir: ${save_dir}/outputs
 
 # benchmarking
-truth_annots_dir: ${evaul_data_dir}/query_ground_truth/${phase} 
+truth_annots_dir: /itf-fi-ml/shared/users/poyenyt/slice-and-view/NLM9_truth_mask/NLM_3phrases_${phase}_binary_mask_human_corrected
+# truth_annots_dir: ${evaul_data_dir}/query_ground_truth/${phase} 
 #/itf-fi-ml/shared/users/poyenyt/slice-and-view/NLM9_truth_mask/NLM_3phrases_${phase}_binary_mask_human_corrected
 
 # change the default directory of hydra output
@@ -46,14 +50,14 @@ hydra:
     output_subdir: ${save_dir}/hydra
 
 model:
-    backbone: vgg16
+    backbone: deeplabv3_resnet50
     
 annotator:
     down_sampling: 4
     patch_width: 224
     patch_height: 224
     margin: 32
-    batch_size: 5
+    batch_size: 256
     keep_dim: True
     save_init_imgs: False
     cuda_device: 0

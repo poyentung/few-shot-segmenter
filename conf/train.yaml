@@ -1,6 +1,6 @@
 defaults:
-  - model: default.yaml #default.yaml
-  - datamodule: default.yaml
+  - model: deeplabv3.yaml #default.yaml
+  - datamodule: deeplabv3.yaml
   - callbacks: default.yaml
   - logger: wandb.yaml # set logger here or use command line (e.g. `python train.py logger=tensorboard`)
   - trainer: default.yaml
@@ -16,7 +16,7 @@ defaults:
 original_work_dir: ${hydra:runtime.cwd}
 
 # path to folder with data & define model name
-model_name: test
+model_name: cauliflower
 save_dir: ${original_work_dir}/results/${model_name}
 
 # change the default directory of hydra output
@@ -24,7 +24,7 @@ hydra:
     output_subdir: ${save_dir}
 
 model:
-    backbone: vgg16
+    backbone: deeplabv3_resnet50
 
 trainer:
     max_epochs: 50
@@ -39,13 +39,13 @@ logger:
 
 datamodule:
     # Configuration
-    datapath: ${original_work_dir}/demo_data/train
-    nshot: 3
+    datapath: ${original_work_dir}/data
+    # nshot: 3
     nsamples: 500
 
     # hyperparams
     val_data_ratio: 0.15
-    batch_size: 5
+    batch_size: 16
     n_cpu: 8
 
     # Data augmentation
