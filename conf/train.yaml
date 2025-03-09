@@ -16,7 +16,7 @@ defaults:
 original_work_dir: ${hydra:runtime.cwd}
 
 # path to folder with data & define model name
-model_name: _cauliflower3_filled_scale_0.25-0.75
+model_name: _nml9
 save_dir: ${original_work_dir}/${model_name}
 
 # change the default directory of hydra output
@@ -33,7 +33,7 @@ trainer:
 logger:
     wandb:
         save_dir: ${save_dir}/lightning_logs
-        project: slice-and-view_cauliflower3
+        project: nml9
 
 
 datamodule:
