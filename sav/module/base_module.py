@@ -262,7 +262,7 @@ class DeepLabV3Module(pl.LightningModule):
                 weight_decay=self.weight_decay)
         else:
             raise Exception("Unknown optimizer. Only adam is implemented.")
-
+        return optimizer
 
 def set_greyscale_weights(model: vgg.VGG) -> vgg.VGG:
     weights = model.features[0].weight.data
