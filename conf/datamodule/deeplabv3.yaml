@@ -1,8 +1,7 @@
-_target_: sav.datamodule.DatamoduleSAV
+_target_: sav.datamodule.DatamoduleDeepLabV3
     
 # Configuration
 datapath: data
-nshot: 3
 nsamples: 500
 
 # hyperparams

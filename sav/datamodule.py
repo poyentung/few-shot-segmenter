@@ -1,14 +1,13 @@
 import os
 import torch
 import numpy as np
-from PIL import Image
-import pytorch_lightning as pl
-import torch.nn.functional as F
-from torch.utils.data import random_split, Dataset, DataLoader
-from pathlib import Path
-from typing import Union, Dict, Tuple, AnyStr
 import torchvision
 import torchvision.transforms.v2 as transforms
+import pytorch_lightning as pl
+
+from pathlib import Path
+from typing import Union, Dict, Tuple, AnyStr
+from torch.utils.data import random_split, Dataset, DataLoader
 from sav.utils.utils import get_img_sizes, sampling_from_dir, sample_paired_img_annot
 
 torchvision.disable_beta_transforms_warning()
@@ -18,20 +17,18 @@ class DatamoduleSAV(pl.LightningDataModule):
                  datapath:Union[Path, AnyStr], 
                  nshot:int=5,
                  nsamples:int=1000,
-                 # img_sizes:Dict[str, Tuple[int, int]]={'cauliflower':(2048,1536),}
-                 #                                       # 'apollo_70017':(1004,1024)},
                  contrast:Tuple[float,float]=(0.5,1.2),
                  vflip_p:float=0.5, 
                  hflip_p:float=0.5,
                  rotation_degrees:float=90.0,
                  scale:Tuple[float,float]=(0.8,1.2),
                  crop_size:float=512,
+                 copy_paste_prob:float=0.15,
                  val_data_ratio:float=0.15,
                  batch_size:int=20,
                  n_cpu:int=4,
                 ):
         super().__init__()
-        
         
         self.nshot = nshot
         self.val_data_ratio = val_data_ratio
@@ -39,7 +36,7 @@ class DatamoduleSAV(pl.LightningDataModule):
         self.n_cpu = n_cpu
         self.img_sizes = get_img_sizes(datapath)# e.g., {'cauliflower':(2048,1536),'apollo_70017':(1004,1024)}
         self.dataset_full = DatasetSAV(datapath, nshot, nsamples, self.img_sizes, contrast, 
-                                       vflip_p, hflip_p, rotation_degrees, scale, crop_size)
+                                       vflip_p, hflip_p, rotation_degrees, scale, crop_size, copy_paste_prob)
     
     def setup(self, stage = None):
         if stage == "fit" or stage is None:
@@ -73,8 +70,64 @@ class DatamoduleSAV(pl.LightningDataModule):
                           shuffle=False,
                           num_workers=self.n_cpu,
                           pin_memory=True)
-        
+    
+    
+class DatamoduleDeepLabV3(pl.LightningDataModule):
+    def __init__(self,
+                 datapath:Union[Path, AnyStr], 
+                 nsamples:int=1000,
+                 contrast:Tuple[float,float]=(0.5,1.2),
+                 vflip_p:float=0.5, 
+                 hflip_p:float=0.5,
+                 rotation_degrees:float=90.0,
+                 scale:Tuple[float,float]=(0.8,1.2),
+                 crop_size:float=512,
+                 copy_paste_prob:float=0.15,
+                 val_data_ratio:float=0.15,
+                 batch_size:int=20,
+                 n_cpu:int=4,
+                ):
+        super().__init__()
+        self.val_data_ratio = val_data_ratio
+        self.batch_size = batch_size
+        self.n_cpu = n_cpu
+        self.img_sizes = list(get_img_sizes(datapath).values())[0] # get the first value from a dict
+        self.dataset_full = DatasetDeepLabV3(datapath, nsamples, self.img_sizes, contrast, vflip_p,
+                                             hflip_p, rotation_degrees, scale, crop_size, copy_paste_prob)
 
+    def setup(self, stage = None):
+        if stage == "fit" or stage is None:
+            all_size = self.dataset_full.__len__()
+            val_size = int(all_size*self.val_data_ratio) if (self.val_data_ratio > 0.0) else int(all_size*0.15)
+            self.dataset_train, self.dataset_val = random_split(self.dataset_full, [(all_size - val_size), val_size])
+
+        if stage == "test":
+            all_size = self.dataset_full.__len__()
+            val_size = int(all_size*self.val_data_ratio) if (self.val_data_ratio > 0.0) else int(all_size*0.15)
+            self.dataset_train, self.dataset_test = random_split(self.dataset_full, [(all_size - val_size), val_size])
+
+
+    def train_dataloader(self):
+        return DataLoader(self.dataset_train,
+                          batch_size=self.batch_size,
+                          shuffle=True,
+                          num_workers=self.n_cpu,
+                          pin_memory=True)
+    
+    def val_dataloader(self):
+        return DataLoader(self.dataset_val,
+                          batch_size=self.batch_size,
+                          shuffle=False,
+                          num_workers=self.n_cpu,
+                          pin_memory=True)
+
+    def test_dataloader(self):
+        return DataLoader(self.dataset_test,
+                          batch_size=self.batch_size,
+                          shuffle=False,
+                          num_workers=self.n_cpu,
+                          pin_memory=True)
+                          
 class DatasetSAV(Dataset):
     def __init__(self, 
                  datapath:Union[Path, AnyStr], 
@@ -87,6 +140,7 @@ class DatasetSAV(Dataset):
                  rotation_degrees:float=90.0,
                  scale:Tuple[float,float]=(0.8,1.2),
                  crop_size:float=512,
+                 copy_paste_prob:float=0.15,
                 ):
         """
         Args:
@@ -112,6 +166,7 @@ class DatasetSAV(Dataset):
         self.base_path = datapath
         self.nshot = nshot
         self.nsamples = nsamples
+        self.copy_paste_prob = copy_paste_prob
         
         self.specimen_names = [sample for sample in os.listdir(self.base_path) if '.' not in sample]
         
@@ -126,7 +181,7 @@ class DatasetSAV(Dataset):
             self.image_copy_paste[key]=ImageCopyPaste(base_path=self.base_path, 
                                                       transform=self.random_rotation_crop[key],
                                                       normalize=self.normalize,
-                                                      p=0.2)
+                                                      p=self.copy_paste_prob)
     
     def __len__(self):
         return self.nsamples
@@ -150,7 +205,7 @@ class DatasetSAV(Dataset):
         query_transformed = self.random_rotation_crop[specimen_name](query_img, query_annot)
         query_img, query_annot = query_transformed['img'], query_transformed['annot']
         query_img = self.normalize(query_img) # size = [1,512,512]
-        
+
         # apply copy_paste
         query_img, query_annot = self.image_copy_paste[specimen_name](query_img, query_annot, specimen_phase_name)
         
@@ -173,28 +228,74 @@ class DatasetSAV(Dataset):
                 'support_annots': torch.stack(support_annots,dim=0).to(dtype=torch.float32), # size = [nshot,1,512,512]
                 'specimen_phase_name':specimen_phase_name,
                }
+
+
+class DatasetDeepLabV3(Dataset):
+    def __init__(self, 
+                 datapath:Union[Path, AnyStr], 
+                 nsamples:int=1000,
+                 img_sizes:Dict[str, Tuple[int, int]]=None,
+                 contrast:Tuple[float,float]=(0.5,1.2),
+                 vflip_p:float=0.5, 
+                 hflip_p:float=0.5,
+                 rotation_degrees:float=90.0,
+                 scale:Tuple[float,float]=(0.8,1.2),
+                 crop_size:float=512,
+                 copy_paste_prob:float=0.15,
+                ):
+        """
+        Args:
+            datapath (path): A folder directory containing multiple specimens and phases. The directory structure is as following:
+            
+                datapath/        
+                └── phase/
+                    ├── annotation/        # target masks
+                    └── image/             # input images
+            
+            nsamples (int): Number of training images cropped from the original images.
+            rotation_degrees (float): roataion angle of the image for the data augmentation
+            crop_size (int): size to be cropped from the rotated images
+            transform (torchvision.transforms): the transformation to torch.tensor (preprocessing).
+        """
+        super().__init__()
+        self.base_path = datapath
+        self.nsamples = nsamples
+        self.copy_paste_prob = copy_paste_prob
     
-#     @classmethod
-#     def sampling_from_dir(cls, path:Union[Path, AnyStr])->Union[Path, AnyStr]:
-#         """
-#         Ramdonly sample a file_name from a diretory, and return its full path of the file or the directory.
-#         """
-#         file_names = [file_name for file_name in os.listdir(path) if '.ipynb' not in file_name]
-#         fine_name = np.random.choice(file_names, 1, replace=False)[0]
-#         return os.path.join(path, fine_name)
-    
-#     @classmethod
-#     def sample_paired_img_annot(cls, phase_dir:Union[Path, AnyStr])->Tuple["numpy.ndarray", "numpy.ndarray"]:
-#         # Randomly sample an img from the phase
-#         img_dir = os.path.join(phase_dir, 'image')
-#         img_path = DatasetSAV.sampling_from_dir(img_dir)
-#         img = np.array(Image.open(img_path)).astype(np.float64)
         
-#         # Get the corresponding annotation of the img
-#         annot_dir = os.path.join(phase_dir, 'annotation')
-#         annot_path = os.path.join(phase_dir, 'annotation', img_path.split('/')[-1])
-#         annot = np.array(Image.open(annot_path)).astype(np.float64)
-#         return (img, annot)
+        self.random_rotation_crop=RandomRotationCrop(img_sizes,vflip_p, hflip_p,rotation_degrees, scale, crop_size)
+        self.normalize = transforms.Compose([transforms.ColorJitter(contrast=contrast),
+                                             transforms.Normalize(mean=[0.5],std=[0.5])])
+        self.image_copy_paste=ImageCopyPaste(base_path=self.base_path, 
+                                                      transform=self.random_rotation_crop,
+                                                      normalize=self.normalize,
+                                                      p=self.copy_paste_prob)
+    
+    def __len__(self):
+        return self.nsamples
+    
+    def __getitem__(self, idx, phase_dir=None): # If we only want to sample a specific phase specify the phase_dir
+        
+        if phase_dir==None:
+            specimen_dir = sampling_from_dir(self.base_path)
+            phase_dir = sampling_from_dir(specimen_dir)
+            specimen_phase_name = specimen_dir.split('/')[-1] + '_' + phase_dir.split('/')[-1]
+                                             
+                                             
+        # Get the querry img and annot
+        query_img, query_annot = sample_paired_img_annot(phase_dir)
+        # Get the rotated and cropped img and annot
+        query_transformed = self.random_rotation_crop(query_img, query_annot)
+        query_img, query_annot = query_transformed['img'], query_transformed['annot']
+        query_img = self.normalize(query_img) # size = [1,512,512]
+
+        # apply copy_paste
+        query_img, query_annot = self.image_copy_paste(query_img, query_annot, specimen_phase_name)
+        
+        return {'query_img':query_img.to(dtype=torch.float32),                               # size = [1,1,512,512]
+                'query_annot':query_annot.to(dtype=torch.float32),                           # size = [1,1,512,512]
+                'specimen_phase_name':specimen_phase_name,
+               }
 
 class RandomRotationCrop:
     """

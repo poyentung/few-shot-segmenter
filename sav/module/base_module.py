@@ -143,8 +143,125 @@ class BaseModule(pl.LightningModule):
             optimizer = torch.optim.SGD(self.parameters(), lr=self.learning_rate)
         else:
             raise Exception("Unknown optimizer. Only adam is implemented.")
-
         return optimizer
+
+class DeepLabV3Module(pl.LightningModule):
+    def __init__(self, 
+                 backbone:str='deeplabv3_resnet50', 
+                 optimizer:str='adam', 
+                 learning_rate:float=1e-4, 
+                 weight_decay:float=1e-5
+                ):
+        super().__init__()
+        
+        self.backbone_type = backbone
+        self.optimizer = optimizer
+        self.learning_rate = learning_rate
+        self.weight_decay = weight_decay
+        self.criterion = nn.BCEWithLogitsLoss()
+        self.calculate_IoU = BinaryJaccardIndex(threshold=0.5)
+    
+    def forward(self, query_img, support_imgs, support_annots):
+        return NotImplementedError
+    
+    def training_step(self, train_batch, batch_idx):
+        query_img      = train_batch['query_img']        # size = [1,1,512,512]
+        query_annot    = train_batch['query_annot']      # size = [1,1,512,512]
+        query_annot_hat = self(query_img)
+
+        loss = self.criterion(query_annot_hat, query_annot)
+        iou = self.calculate_IoU(F.sigmoid(query_annot_hat), query_annot)
+
+        metrics = {
+            'loss':loss,
+            'iou':iou,
+        }
+
+        self.log('train/loss', metrics['loss'], prog_bar=True, on_step=True)
+        self.log('train/iou', metrics['iou'], prog_bar=True, on_step=True)
+
+        return metrics
+
+    def train_epoch_end(self, training_step_outputs):
+        epoch_train_loss = torch.stack([x['loss'] for x in training_step_outputs]).mean()
+        self.log('train/loss_epoch', epoch_train_loss, prog_bar=True, on_step=False)
+
+    def validation_step(self, val_batch, batch_idx):
+        query_img      = val_batch['query_img']        # size = [bs,1,512,512]
+        query_annot    = val_batch['query_annot']      # size = [bs,1,512,512]
+        specimen_phase_name = val_batch['specimen_phase_name'] 
+        
+        query_annot_hat = self(query_img)
+        loss = self.criterion(query_annot_hat, query_annot)
+        
+        iou = self.calculate_IoU(query_annot_hat, query_annot)
+        
+        metrics = {
+            'val_loss':loss,
+            'val_iou': iou,
+            'class': specimen_phase_name[0],
+            'query_img':query_img,
+            'query_annot':query_annot,
+            'query_annot_hat':query_annot_hat,
+        }
+
+        self.log('val/val_loss', metrics['val_loss'], prog_bar=False, on_step=True)
+        self.log('val/val_iou', metrics['val_iou'], prog_bar=False, on_step=True)
+
+        return metrics
+    
+    def validation_epoch_end(self, valid_step_outputs):
+        epoch_val_loss = torch.stack([x['val_loss'] for x in valid_step_outputs]).mean()
+        epoch_val_iou = torch.stack([x['val_iou'] for x in valid_step_outputs]).mean()
+        self.log('val/epoch_val_loss', epoch_val_loss, prog_bar=True, on_step=False)
+        self.log('val/epoch_val_iou', epoch_val_iou, prog_bar=True, on_step=False)
+        
+        # calculate iou per class
+        class_iou = {}
+        for output in valid_step_outputs:
+            if output['class'] not in class_iou.keys():
+                class_name = output['class']
+                class_iou[class_name] = [output['val_iou']]
+            else:
+                class_iou[class_name].append(output['val_iou'])
+        
+        for class_name in class_iou.keys():
+            class_iou[class_name] = torch.stack(class_iou[class_name]).mean().detach().cpu().numpy()
+            self.log(f'metric/mean_iou_{class_name}', float(class_iou[class_name]))
+        
+        metrics_list = list()
+        for i, class_name in enumerate(class_iou.keys()):
+            metrics_list.append([class_name, class_iou[class_name]])
+        
+        self.logger.log_table(key=f'metrics_per_class_{self.current_epoch}', 
+                              columns=['class_name', 'mean_iou'], 
+                              data=metrics_list)
+        
+        self.metrics = pd.DataFrame.from_dict(class_iou, orient='index', columns=['mean_iou'])
+
+        # plot validation results
+        last_batch = valid_step_outputs[-1]
+        fig = plot_evaluation(last_batch)
+        
+        log_fig(fig=fig,
+                log_name='visual/eval_check',  
+                logger=self.logger, 
+                current_epoch=self.current_epoch)
+        
+    def test_step(self, test_batch, batch_idx):
+        return self.validation_step(test_batch, batch_idx)
+    
+    def test_epoch_end(self, test_step_outputs):
+        self.on_validation_epoch_end(test_step_outputs)
+
+    def configure_optimizers(self):
+        if self.optimizer == "adam":
+            optimizer = torch.optim.Adam(
+                self.parameters(),
+                lr=self.learning_rate,
+                weight_decay=self.weight_decay)
+        else:
+            raise Exception("Unknown optimizer. Only adam is implemented.")
 
 
 def set_greyscale_weights(model: vgg.VGG) -> vgg.VGG:
@@ -177,7 +294,6 @@ class TimeDistributed(nn.Module):
         y = self.module(x_reshape)
         y = y.view(n, t, *y.size()[1:])
         return y
-
 
 class GlobalAveragePooling2D(nn.Module):
     def __init__(self):

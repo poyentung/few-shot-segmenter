@@ -2,11 +2,12 @@ import os
 import hydra
 import numpy as np
 from omegaconf import DictConfig
-from typing import Union
-from typing import  Union
+import pytorch_lightning as pl
+from typing import List, Optional
 from sav.utils import hydra_logging
-from sav.module.fs_segmenter import FewShotSegmenter, DeepLabV3
+from sav.module.fs_segmenter import FewShotSegmenter
 from sav.utils.annotator import Annotator
+from pytorch_lightning import LightningModule
 
 log = hydra_logging.get_logger(__name__)
 
@@ -17,7 +18,7 @@ def segment(config: DictConfig):
 
     # Init lightning model
     log.info(f"Instantiating model <{config.model._target_}>")
-    model: Union[FewShotSegmenter, DeepLabV3] = hydra.utils.instantiate(config.model).load_from_checkpoint(config.ckpt_path)
+    model: FewShotSegmenter = hydra.utils.instantiate(config.model).load_from_checkpoint(config.ckpt_path)
     
     # Init annotator
     log.info(f"Instantiating annotator <{config.annotator._target_}>")
@@ -25,8 +26,6 @@ def segment(config: DictConfig):
     
     #Segmenting images
     annotator(query_img_path = config.query_img_path,
-              support_imgs_dir = config.support_imgs_dir,
-              support_annots_dir = config.support_annots_dir,
               save_dir = config.output_dir)
     
     # Benchmarking

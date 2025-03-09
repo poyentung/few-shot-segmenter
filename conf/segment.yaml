@@ -8,25 +8,37 @@ defaults:
   - override hydra/hydra_logging: colorlog
 
 # path to original working directory
-# hydra hijacks working directory by changing it to the new log directory
+# hydra hijacks working directory by changing _it to the new log directory
 # https://hydra.cc/docs/next/tutorials/basic/running_your_app/working_directory
 original_work_dir: ${hydra:runtime.cwd}
 
+# phase
+phase: cauliflower
+
+#model name
+model_name: test #_5shot_3slice
+
+# default name for the experiment, determines logging folder path
+# (you can overwrite this name in experiment configs)
+name: ${model_name}_${phase}
+
 # path to directory where images are saved 
-save_dir: /itf-fi-ml/shared/users/poyenyt/slice-and-view/cauliflower3_output
+save_dir: /itf-fi-ml/shared/users/poyenyt/slice-and-view/${name}
+# /scratch/users/poyenyt/slice-and-view/${name}
 
 #${original_work_dir}/test_data/cauliflower2_magnetite_mask
 
 # checkpoint path of the lightning module
-ckpt_path: ${original_work_dir}/_cauliflower3_filled_p=0.2/checkpoints/_cauliflower3_filled_p=0.2/last.ckpt
-
-#/checkpoints/20230411_256_copy_paste/Avgpool-epoch=194.ckpt
+ckpt_path: ${original_work_dir}/${model_name}/checkpoints/${model_name}/last.ckpt #${original_work_dir}/_benchmark/${model_name}/checkpoints/${model_name}/last.ckpt
 
 # path for segmentation
-query_img_path: /itf-fi-ml/shared/users/poyenyt/slice-and-view/cauliflower3
-support_imgs_dir: ${original_work_dir}/test_data/cauliflower3_plaquette/image
-support_annots_dir: ${original_work_dir}/test_data/cauliflower3_plaquette/annotation
+query_img_path: /itf-fi-ml/shared/users/poyenyt/slice-and-view/NLM9
+support_imgs_dir: ${original_work_dir}/test_data/NLM9/0.25_256x256/${phase}/image
+support_annots_dir: ${original_work_dir}/test_data/NLM9/0.25_256x256/${phase}/annotation
 output_dir: ${save_dir}/outputs
+
+# benchmarking
+truth_annots_dir: /itf-fi-ml/shared/users/poyenyt/slice-and-view/NLM9_truth_mask/NLM_3phrases_${phase}_binary_mask_human_corrected
 
 # change the default directory of hydra output
 hydra:
@@ -36,11 +48,14 @@ model:
     backbone: vgg16
     
 annotator:
-    down_sampling: 2
+    down_sampling: 4
     patch_width: 224
     patch_height: 224
     margin: 32
-    batch_size: 3
+    batch_size: 12
+    keep_dim: True
+    save_init_imgs: False
+    cuda_device: 0
 
 
 # pretty print config at the start of the run using Rich library
@@ -53,6 +68,4 @@ ignore_warnings: True
 # lightning chooses best weights based on the metric specified in checkpoint callback
 test: False
 
-# default name for the experiment, determines logging folder path
-# (you can overwrite this name in experiment configs)
-name: "default"
+

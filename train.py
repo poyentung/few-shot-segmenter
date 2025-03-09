@@ -1,20 +1,13 @@
 import os
 import hydra
 from omegaconf import DictConfig
-import pytorch_lightning as pl
-from typing import List, Optional
+from typing import List, Union
 from sav.utils import hydra_logging
-from sav.datamodule import DatamoduleSAV
-from sav.module.fs_segmenter import FewShotSegmenter
-from pytorch_lightning.callbacks.progress import RichProgressBar
-from pytorch_lightning.callbacks import ModelCheckpoint
-from pytorch_lightning.loggers import TensorBoardLogger
+from sav.datamodule import DatamoduleSAV, DatasetDeepLabV3
+from sav.module.fs_segmenter import FewShotSegmenter, DeepLabV3
 from pytorch_lightning.loggers import LightningLoggerBase
-
 from pytorch_lightning import (
     Callback,
-    LightningDataModule,
-    LightningModule,
     Trainer,
     seed_everything,
 )
@@ -32,11 +25,11 @@ def train(config: DictConfig):
 
     # Init lightning datamodule
     log.info(f"Instantiating datamodule <{config.datamodule._target_}>")
-    data_module: DatamoduleSAV = hydra.utils.instantiate(config.datamodule)
+    data_module: Union[DatamoduleSAV, DatasetDeepLabV3] = hydra.utils.instantiate(config.datamodule)
 
     # Init lightning model
     log.info(f"Instantiating model <{config.model._target_}>")
-    model: FewShotSegmenter = hydra.utils.instantiate(config.model)
+    model: Union[FewShotSegmenter, DeepLabV3] = hydra.utils.instantiate(config.model)
 
     # Init lightning callbacks
     callbacks: List[Callback] = []
@@ -81,7 +74,7 @@ def train(config: DictConfig):
         if ckpt_path == "":
             log.warning("Best ckpt not found! Using current weights for testing...")
             ckpt_path = None
-        trainer.test(model=model, datamodule=datamodule, ckpt_path=ckpt_path)
+        trainer.test(model=model, datamodule=data_module, ckpt_path=ckpt_path)
         log.info(f"Best ckpt path: {ckpt_path}")
         
     # Make sure everything closed properly
