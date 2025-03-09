@@ -1,11 +1,17 @@
 __pycache__/
 .ipynb_checkpoints/
-cauli_apollo/
 checkpoints/
-data/
 lightning_logs/
-outputs/
+
+# Training data and results
+_*/
+data/
 test_data/
+results/
+outputs/
+
+# Virtual environments
+.venv/
 
 # Compiled source #
 ###################
