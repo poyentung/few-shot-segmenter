@@ -5,4 +5,5 @@ backbone: vgg16
 optimizer: adam
 learning_rate: 1e-4
 weight_decay: 1e-4
+focal_loss_lmbda: 0.9
 

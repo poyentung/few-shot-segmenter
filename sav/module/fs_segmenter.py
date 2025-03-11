@@ -19,11 +19,12 @@ class FewShotSegmenter(BaseModule):
                  backbone:str='vgg16', 
                  optimizer:str='adam', 
                  learning_rate:float=1e-4, 
-                 weight_decay:float=1e-5
+                 weight_decay:float=1e-5,
+                 focal_loss_lmbda:float=0.9
                 ):
         super().__init__(backbone, optimizer, learning_rate, weight_decay)
         
-        self.criterion = FocalDiceLoss(lmbda=0.9)
+        self.criterion = FocalDiceLoss(lmbda=focal_loss_lmbda)
         
         def building_blocks_trans(in_dim, out_dim, filter_size=3,stride=1,padding=0):
             return nn.Sequential(nn.ConvTranspose2d(in_dim, out_dim, filter_size, stride=stride, padding=padding),
