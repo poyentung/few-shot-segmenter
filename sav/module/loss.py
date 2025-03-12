@@ -4,25 +4,37 @@ import torch.nn.functional as F
 import numpy as np
 from torchvision.ops import sigmoid_focal_loss
 
+
 class FocalDiceLoss(nn.Module):
-    def __init__(self, lmbda:float=0.8, alpha:float=0.25, gamma:float=2.0, smooth:float=1.0, p:float=2.0, reduction='mean'):
+    def __init__(
+        self,
+        lmbda: float = 0.8,
+        alpha: float = 0.25,
+        gamma: float = 2.0,
+        smooth: float = 1.0,
+        p: float = 2.0,
+        reduction="mean",
+    ):
         super().__init__()
-        self.lmbda= lmbda
+        self.lmbda = lmbda
         self.alpha = alpha
         self.gamma = gamma
         self.reduction = reduction
         self.dice_loss = BinaryDiceLoss(smooth=smooth, p=p, reduction=reduction)
-    
+
     def forward(self, predict, target):
-        focal_loss = sigmoid_focal_loss(inputs=predict, 
-                                        targets=target, 
-                                        alpha=self.alpha, 
-                                        gamma=self.gamma, 
-                                        reduction=self.reduction)
+        focal_loss = sigmoid_focal_loss(
+            inputs=predict,
+            targets=target,
+            alpha=self.alpha,
+            gamma=self.gamma,
+            reduction=self.reduction,
+        )
         dice_loss = self.dice_loss(predict=F.sigmoid(predict), target=target)
-        
-        return self.lmbda*focal_loss + (1-self.lmbda)*dice_loss
-    
+
+        return self.lmbda * focal_loss + (1 - self.lmbda) * dice_loss
+
+
 class BinaryDiceLoss(nn.Module):
     """Dice loss of binary class
     Args:
@@ -37,14 +49,17 @@ class BinaryDiceLoss(nn.Module):
     Raise:
         Exception if unexpected reduction
     """
-    def __init__(self, smooth=1, p=2, reduction='mean'):
+
+    def __init__(self, smooth=1, p=2, reduction="mean"):
         super(BinaryDiceLoss, self).__init__()
         self.smooth = smooth
         self.p = p
         self.reduction = reduction
 
     def forward(self, predict, target):
-        assert predict.shape[0] == target.shape[0], "predict & target batch size don't match"
+        assert predict.shape[0] == target.shape[0], (
+            "predict & target batch size don't match"
+        )
         predict = predict.contiguous().view(predict.shape[0], -1)
         target = target.contiguous().view(target.shape[0], -1)
 
@@ -53,11 +68,11 @@ class BinaryDiceLoss(nn.Module):
 
         loss = 1 - num / den
 
-        if self.reduction == 'mean':
+        if self.reduction == "mean":
             return loss.mean()
-        elif self.reduction == 'sum':
+        elif self.reduction == "sum":
             return loss.sum()
-        elif self.reduction == 'none':
+        elif self.reduction == "none":
             return loss
         else:
-            raise Exception('Unexpected reduction {}'.format(self.reduction))
+            raise Exception("Unexpected reduction {}".format(self.reduction))
