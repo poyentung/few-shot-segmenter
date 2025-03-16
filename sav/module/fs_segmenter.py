@@ -25,10 +25,13 @@ class FewShotSegmenter(BaseModule):
         weight_decay: float = 1e-5,
         focal_loss_lmbda: float = 0.9,
         focal_loss_alpha: float = 0.25,
+        focal_loss_gamma: float = 2.0,
     ):
         super().__init__(backbone, optimizer, learning_rate, weight_decay)
 
-        self.criterion = FocalDiceLoss(lmbda=focal_loss_lmbda, alpha=focal_loss_alpha)
+        self.criterion = FocalDiceLoss(
+            lmbda=focal_loss_lmbda, alpha=focal_loss_alpha, gamma=focal_loss_gamma
+        )
 
         def building_blocks_trans(in_dim, out_dim, filter_size=3, stride=1, padding=0):
             return nn.Sequential(
